@@ -1,0 +1,82 @@
+{% set active = 'profile' %}
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block body %}
+{% include '_sidebar.html' %}
+
+<header class="topbar">
+    <button class="hmbg" aria-label="Menu"><i class="fas fa-bars"></i></button>
+    <div class="tb-left">
+        <div class="tb-title">My Profile</div>
+        <div class="tb-sub">Manage your personal information</div>
+    </div>
+    <div class="tb-right">
+        <a href="/patient/dashboard" class="btn-g"><i class="fas fa-arrow-left"></i> Dashboard</a>
+    </div>
+</header>
+
+<main class="pw pe">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }} mb-3"><i class="fas fa-check-circle"></i>{{ msg }}</div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+
+            <!-- Profile Summary -->
+            <div class="card mb-4">
+                <div class="cb" style="padding:24px!important;display:flex;align-items:center;gap:20px;">
+                    <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#2589c7,#1553a0);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:22px;flex-shrink:0;">
+                        {{ user.name[0]|upper }}
+                    </div>
+                    <div>
+                        <div style="font-size:18px;font-weight:800;color:var(--navy);">{{ user.name }}</div>
+                        <div style="font-size:13px;color:var(--slate);margin-top:2px;">{{ user.email }}</div>
+                        <div style="margin-top:6px;display:flex;gap:6px;align-items:center;">
+                            <span style="background:#eff6ff;color:var(--blue);font-size:11px;font-weight:700;padding:2px 9px;border-radius:4px;border:1px solid #bfdbfe;">Patient</span>
+                            {% if user.gender %}<span style="background:#f1f5f9;color:var(--slate);font-size:11px;font-weight:600;padding:2px 9px;border-radius:4px;">{{ user.gender }}</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Form -->
+            <div class="card">
+                <div class="ch"><i class="fas fa-user-pen" style="color:var(--blue);"></i> Edit Profile</div>
+                <div class="cb" style="padding:22px!important;">
+                    <form method="POST">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="fl">Full Name *</label>
+                                <input type="text" name="name" class="fi" value="{{ user.name }}" required placeholder="Your full name">
+                            </div>
+                            <div class="col-12">
+                                <label class="fl">Email Address</label>
+                                <input type="email" class="fi" value="{{ user.email }}" disabled style="background:#f8fafc;color:var(--muted);cursor:not-allowed;">
+                                <div class="fh">Email cannot be changed. Contact support if needed.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="fl">Phone Number</label>
+                                <input type="tel" name="phone" class="fi" value="{{ user.phone or '' }}" placeholder="+91 98765 43210">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="fl">Date of Birth</label>
+                                <input type="date" name="dob" class="fi" value="{{ user.dob or '' }}">
+                            </div>
+                        </div>
+                        <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">
+                            <button type="submit" class="bp" style="padding:10px 28px;">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>
+{% endblock %}

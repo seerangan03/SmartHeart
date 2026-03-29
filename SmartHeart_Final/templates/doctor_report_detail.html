@@ -1,0 +1,414 @@
+{% set active = 'patients' %}
+{% extends "base.html" %}
+{% block title %}Report — {{ report.ref_id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── RISK HERO ── */
+.risk-hero{border-radius:14px;padding:20px 24px;color:#fff;display:flex;align-items:center;gap:20px;flex-wrap:wrap;position:relative;overflow:hidden;}
+.risk-hero.sev-Low{background:linear-gradient(118deg,#064e3b,#059669);}
+.risk-hero.sev-Moderate{background:linear-gradient(118deg,#78350f,#d97706);}
+.risk-hero.sev-High{background:linear-gradient(118deg,#7c2d12,#ea580c);}
+.risk-hero.sev-Critical{background:linear-gradient(118deg,#450a0a,#dc2626);}
+.risk-hero::after{content:'';position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none;}
+.rh-ring{width:80px;height:80px;border-radius:50%;border:2.5px solid rgba(255,255,255,.22);display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,.1);backdrop-filter:blur(8px);flex-shrink:0;}
+.rh-score{font-size:22px;font-weight:900;line-height:1;}
+.rh-lbl{font-size:9px;opacity:.55;margin-top:1px;}
+.rh-bar{background:rgba(255,255,255,.1);border-radius:8px;height:5px;overflow:hidden;margin-top:14px;}
+.rh-fill{height:100%;border-radius:8px;background:rgba(255,255,255,.65);transition:width 1.4s cubic-bezier(.4,0,.2,1);}
+
+/* ── STAT STRIP ── */
+.stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.stat-card{background:#fff;border-radius:11px;padding:14px 16px;border:1px solid var(--border);display:flex;flex-direction:column;gap:3px;}
+.stat-lbl{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.stat-val{font-size:19px;font-weight:800;color:var(--navy);line-height:1.1;}
+.stat-sub{font-size:11px;color:var(--slate);}
+
+/* ── VITALS TABLE ── */
+.vt-row{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid #eef2f8;gap:10px;}
+.vt-row:last-child{border-bottom:none;}
+.vt-param{font-size:12.5px;font-weight:600;color:var(--navy);min-width:160px;flex-shrink:0;display:flex;align-items:center;gap:7px;}
+.vt-val{font-size:13px;font-weight:700;color:#1a2840;flex:1;min-width:0;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vt-ref{font-size:11px;color:var(--muted);width:100px;text-align:right;flex-shrink:0;}
+.vt-tag{font-size:10px;padding:3px 10px;border-radius:6px;font-weight:800;font-family:var(--mono);text-transform:uppercase;white-space:nowrap;flex-shrink:0;min-width:80px;text-align:center;letter-spacing:.3px;}
+.vt-n{background:#dcfce7;color:#15803d;border:1px solid #86efac;}
+.vt-w{background:#fef3c7;color:#92400e;border:1px solid #fbbf24;}
+.vt-r{background:#fee2e2;color:#b91c1c;border:1px solid #f87171;}
+
+/* ── FORM FIELDS ── */
+.drfield{margin-bottom:14px;}
+.drfield .fl{display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:5px;}
+.drfield textarea.fi,.drfield input.fi{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--f);color:#1e293b;outline:none;resize:vertical;transition:border-color .15s,box-shadow .15s;}
+.drfield textarea.fi:focus,.drfield input.fi:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,111,196,.1);}
+.drfield .fh{font-size:11px;color:var(--muted);margin-top:4px;}
+
+/* ── ACTIONS ── */
+.act-primary{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 20px;border-radius:10px;background:var(--blue);color:#fff;font-size:14px;font-weight:700;text-decoration:none;transition:all .18s;border:none;cursor:pointer;font-family:var(--f);width:100%;margin-bottom:10px;}
+.act-primary:hover{background:#1258a8;color:#fff;transform:translateY(-1px);box-shadow:0 6px 20px rgba(26,111,196,.35);}
+.act-danger{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 20px;border-radius:10px;background:#fff;color:#dc2626;font-size:14px;font-weight:700;border:1.5px solid #fecaca;cursor:pointer;transition:all .18s;font-family:var(--f);width:100%;}
+.act-danger:hover{background:#fee2e2;color:#991b1b;}
+
+/* ── INFO TILES ── */
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;}
+.info-tile{background:var(--surface,#f5f8fc);border:1px solid var(--border);border-radius:9px;padding:12px 14px;}
+.info-tile-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.info-tile-val{font-size:13px;font-weight:700;color:var(--navy);}
+
+/* ── RX BADGE ── */
+.rx-badge{background:var(--gbg);color:var(--green);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid #bbf7d0;display:inline-flex;align-items:center;gap:5px;}
+
+/* ── SECTION DIVIDER ── */
+.sec-div{height:1px;background:var(--border);margin:22px 0;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:992px){.stat-strip{grid-template-columns:1fr 1fr;}.info-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:768px){.vt-ref{display:none;}.info-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:576px){
+  .stat-strip{grid-template-columns:1fr 1fr;gap:8px;}
+  .risk-hero{padding:16px;}.rh-ring{width:66px;height:66px;}.rh-score{font-size:18px;}
+  .info-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+{% endblock %}
+
+{% block body %}
+{% include '_sidebar.html' %}
+
+<header class="topbar">
+  <button class="hmbg" aria-label="Menu"><i class="fas fa-bars"></i></button>
+  <div class="tb-left">
+    <div class="tb-title">Report Detail</div>
+    <div class="tb-sub">
+      <a href="/doctor/patients" style="color:var(--blue);text-decoration:none;">Patients</a>
+      <span style="color:var(--muted);margin:0 5px;">/</span>
+      <span class="mono" style="font-size:11px;">{{ report.ref_id }}</span>
+    </div>
+  </div>
+  <div class="tb-right">
+    <a href="/doctor/patients" class="btn-g"><i class="fas fa-arrow-left"></i><span class="hide-xs"> Back</span></a>
+    <a href="/doctor/download-pdf/{{ report.id }}" class="btn-p"><i class="fas fa-download"></i><span class="hide-xs"> PDF</span></a>
+  </div>
+</header>
+
+<main class="pw pe">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ cat }} mb-3"><i class="fas fa-circle-info"></i> {{ msg }}</div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <!-- ══ STAT STRIP ══ -->
+  <div class="stat-strip">
+    <div class="stat-card">
+      <div class="stat-lbl">Patient</div>
+      <div class="stat-val" style="font-size:15px;">{{ report.patient_name }}</div>
+      <div class="stat-sub">{{ report.patient_email }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Risk Score</div>
+      <div class="stat-val" style="color:{% if report.severity=='Low' %}var(--green){% elif report.severity=='Moderate' %}var(--yellow){% elif report.severity=='High' %}var(--orange){% else %}var(--red){% endif %};">
+        {{ report.risk_score|round(1) }}<span style="font-size:13px;font-weight:600;">%</span>
+      </div>
+      <div class="stat-sub">{{ report.severity }} Risk</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Date</div>
+      <div class="stat-val" style="font-size:14px;">{{ report.created_at[:10] }}</div>
+      <div class="stat-sub">{{ report.created_at[11:16] }} · {{ report.input_method|title }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Report ID</div>
+      <div class="mono" style="font-size:10.5px;margin-top:4px;">{{ report.ref_id }}</div>
+      <div style="margin-top:4px;">
+        {% if existing_rx %}<span class="rx-badge"><i class="fas fa-check"></i> Rx Sent</span>
+        {% else %}<span style="color:var(--muted);font-size:11px;">No prescription yet</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ RISK HERO ── full width ══ -->
+  <div class="card mb-3">
+    <div class="cb" style="padding:16px!important;">
+      <div class="risk-hero sev-{{ report.severity }}">
+        <div class="rh-ring">
+          <div class="rh-score">{{ report.risk_score|round(1) }}%</div>
+          <div class="rh-lbl">risk</div>
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <div style="font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.38);margin-bottom:4px;font-family:var(--mono);">AI Cardiac Assessment</div>
+          <div style="font-size:22px;font-weight:900;margin-bottom:5px;">
+            <i class="{% if report.severity=='Low' %}fas fa-shield-heart{% elif report.severity=='Moderate' %}fas fa-circle-exclamation{% elif report.severity=='High' %}fas fa-triangle-exclamation{% else %}fas fa-heart-crack{% endif %}" style="font-size:1.2rem;opacity:.9;margin-right:8px;"></i>
+            {{ report.severity }} Risk
+          </div>
+          <p style="font-size:12px;color:rgba(255,255,255,.7);margin:0;line-height:1.65;max-width:600px;">
+            {% if report.severity=='Low' %}Cardiac indicators are within safe range. Routine annual monitoring recommended.
+            {% elif report.severity=='Moderate' %}Some cardiac risk factors are elevated. Lifestyle modification and follow-up advised.
+            {% elif report.severity=='High' %}Significant cardiac risk detected. Prompt cardiologist consultation strongly recommended.
+            {% else %}Critical cardiac risk. Immediate medical evaluation and treatment required.{% endif %}
+          </p>
+          <div class="rh-bar" style="max-width:400px;">
+            <div class="rh-fill" id="rhFill" style="width:0%;"></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+          <div style="text-align:center;">
+            <canvas id="miniGauge" width="90" height="50" style="display:block;"></canvas>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:8px;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-family:var(--mono);">Method</div>
+            <span style="background:rgba(255,255,255,.15);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">{{ report.input_method|title }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CLINICAL VITALS — full width ══ -->
+  <div class="card mb-3">
+    <div class="ch">
+      <i class="fas fa-heart-pulse" style="color:var(--red);"></i> Clinical Vitals
+      <span style="margin-left:auto;font-size:11px;font-weight:400;color:var(--muted);">Patient assessment parameters</span>
+    </div>
+    <div class="cb p0">
+      <div class="vt-row">
+        <div class="vt-param"><i class="fas fa-user" style="color:var(--muted);width:14px;"></i>Age</div>
+        <div class="vt-val">{{ report.age }} <span style="color:var(--muted);font-size:11px;font-weight:400;">yrs</span></div>
+        <div class="vt-ref">—</div><div class="vt-tag vt-n">—</div>
+      </div>
+      <div class="vt-row">
+        <div class="vt-param"><i class="fas fa-venus-mars" style="color:var(--muted);width:14px;"></i>Gender</div>
+        <div class="vt-val">{{ 'Male' if report.gender|string == '1' else 'Female' }}</div>
+        <div class="vt-ref">—</div><div class="vt-tag vt-n">—</div>
+      </div>
+      <div class="vt-row">
+        <div class="vt-param"><i class="fas fa-gauge-high" style="color:var(--red);width:14px;"></i>Blood Pressure</div>
+        <div class="vt-val">{{ report.bp }} <span style="color:var(--muted);font-size:11px;font-weight:400;">mmHg</span></div>
+        <div class="vt-ref">90–120 mmHg</div>
+        {% if report.bp|int > 140 %}<div class="vt-tag vt-r">Elevated</div>
+        {% elif report.bp|int > 120 %}<div class="vt-tag vt-w">Pre-High</div>
+        {% else %}<div class="vt-tag vt-n">✓ Normal</div>{% endif %}
+      </div>
+      <div class="vt-row">
+        <div class="vt-param"><i class="fas fa-droplet" style="color:var(--yellow);width:14px;"></i>Cholesterol</div>
+        <div class="vt-val">{{ report.cholesterol }} <span style="color:var(--muted);font-size:11px;font-weight:400;">mg/dL</span></div>
+        <div class="vt-ref">&lt; 200 mg/dL</div>
+        {% if report.cholesterol|int >= 240 %}<div class="vt-tag vt-r">High</div>
+        {% elif report.cholesterol|int >= 200 %}<div class="vt-tag vt-w">Borderline</div>
+        {% else %}<div class="vt-tag vt-n">✓ Normal</div>{% endif %}
+      </div>
+      <div class="vt-row">
+        <div class="vt-param"><i class="fas fa-heart-pulse" style="color:var(--red);width:14px;"></i>Heart Rate</div>
+        <div class="vt-val">{{ report.heart_rate }} <span style="color:var(--muted);font-size:11px;font-weight:400;">bpm</span></div>
+        <div class="vt-ref">60–100 bpm</div>
+        {% if report.heart_rate|int > 100 %}<div class="vt-tag vt-w">Tachycardia</div>
+        {% elif report.heart_rate|int < 60 %}<div class="vt-tag vt-w">Bradycardia</div>
+        {% else %}<div class="vt-tag vt-n">✓ Normal</div>{% endif %}
+      </div>
+      <div class="vt-row">
+        <div class="vt-param"><i class="fas fa-vial" style="color:var(--yellow);width:14px;"></i>Blood Sugar</div>
+        <div class="vt-val">{{ 'Elevated' if report.sugar|string == '1' else 'Normal' }}</div>
+        <div class="vt-ref">&lt; 120 mg/dL</div>
+        {% if report.sugar|string == '1' %}<div class="vt-tag vt-r">High</div>
+        {% else %}<div class="vt-tag vt-n">✓ Normal</div>{% endif %}
+      </div>
+      <div class="vt-row">
+        <div class="vt-param"><i class="fas fa-lungs" style="color:var(--orange);width:14px;"></i>Chest Pain</div>
+        <div class="vt-val">{% if report.chest_pain|string=='0' %}Typical Angina{% elif report.chest_pain|string=='1' %}Atypical Angina{% elif report.chest_pain|string=='2' %}Non-Anginal{% else %}Asymptomatic{% endif %}</div>
+        <div class="vt-ref">—</div>
+        <div class="vt-tag {% if report.chest_pain|string=='0' %}vt-r{% elif report.chest_pain|string in ['1','2'] %}vt-w{% else %}vt-n{% endif %}">
+          {% if report.chest_pain|string=='0' %}High{% elif report.chest_pain|string in ['1','2'] %}Moderate{% else %}Low{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PATIENT INFO + ACTIONS — side by side ══ -->
+  <div class="row g-3 mb-3">
+
+    <!-- Patient Info (col-lg-7) -->
+    <div class="col-lg-7">
+      <div class="card h-100">
+        <div class="ch"><i class="fas fa-id-card" style="color:var(--blue);"></i> Patient Info</div>
+        <div class="cb">
+          <div class="info-grid">
+            <div class="info-tile">
+              <div class="info-tile-lbl">Name</div>
+              <div class="info-tile-val">{{ report.patient_name }}</div>
+            </div>
+            <div class="info-tile" style="grid-column:span 2;">
+              <div class="info-tile-lbl">Email</div>
+              <div class="info-tile-val" style="font-size:12px;word-break:break-all;">{{ report.patient_email }}</div>
+            </div>
+            <div class="info-tile">
+              <div class="info-tile-lbl">Method</div>
+              <div class="info-tile-val">{{ report.input_method|title }}</div>
+            </div>
+            <div class="info-tile" style="grid-column:span 2;">
+              <div class="info-tile-lbl">Report ID</div>
+              <div class="mono" style="font-size:10.5px;margin-top:2px;">{{ report.ref_id }}</div>
+            </div>
+            <div class="info-tile">
+              <div class="info-tile-lbl">Date</div>
+              <div class="info-tile-val" style="font-size:12px;">{{ report.created_at[:16] }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature Chart (col-lg-5 - was in right, now combined with actions) -->
+    <div class="col-lg-5">
+      <div class="card mb-3">
+        <div class="ch"><i class="fas fa-brain" style="color:var(--blue);"></i> Risk Factors</div>
+        <div class="cb"><canvas id="featureBar" height="130"></canvas></div>
+      </div>
+      <!-- ── ACTIONS ── -->
+      <div class="card">
+        <div class="ch"><i class="fas fa-bolt" style="color:var(--yellow);"></i> Actions</div>
+        <div class="cb" style="display:flex;flex-direction:column;gap:10px;">
+          <a href="/doctor/download-pdf/{{ report.id }}" class="act-primary">
+            <i class="fas fa-download" style="font-size:16px;"></i>
+            Download PDF Report
+          </a>
+          <form method="POST" action="/doctor/report/{{ report.id }}"
+                onsubmit="return confirm('Delete this report permanently?')">
+            <input type="hidden" name="action" value="delete">
+            <button type="submit" class="act-danger">
+              <i class="fas fa-trash-alt" style="font-size:16px;"></i>
+              Delete Report
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /row -->
+
+  <!-- ══ SECTION DIVIDER ══ -->
+  <div class="sec-div"></div>
+
+  <!-- ══ CLINICAL REMARKS — full width ══ -->
+  <div class="card mb-3">
+    <div class="ch">
+      <i class="fas fa-comment-medical" style="color:var(--blue);"></i>
+      Clinical Remarks
+      {% if report.doctor_remarks %}
+      <span style="margin-left:auto;font-size:11px;color:var(--green);display:flex;align-items:center;gap:4px;"><i class="fas fa-circle-check"></i> Saved</span>
+      {% endif %}
+    </div>
+    <div class="cb">
+      <form method="POST" action="/doctor/report/{{ report.id }}">
+        <input type="hidden" name="action" value="remarks">
+        <div class="drfield">
+          <label class="fl">Add or update your clinical notes for this patient</label>
+          <textarea name="remarks" class="fi" rows="4"
+            placeholder="Enter clinical observations, diagnosis notes, recommended follow-up actions…">{{ report.doctor_remarks or '' }}</textarea>
+        </div>
+        <button type="submit" class="bp bsm"><i class="fas fa-save"></i> Save Remarks</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══ PRESCRIPTION — full width ══ -->
+  <div class="card">
+    <div class="ch">
+      <i class="fas fa-prescription" style="color:var(--blue);"></i>
+      Send Prescription &amp; Treatment Plan
+      {% if existing_rx %}<span class="rx-badge" style="margin-left:auto;"><i class="fas fa-check"></i> Prescription Sent</span>{% endif %}
+    </div>
+    <div class="cb">
+      {% if existing_rx %}
+      <div style="background:var(--gbg);border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:13px;color:#065f46;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-circle-check"></i>
+        Prescription sent on <strong>{{ existing_rx.created_at[:16] }}</strong>. Update below to revise.
+      </div>
+      {% endif %}
+      <form method="POST" action="/doctor/report/{{ report.id }}">
+        <input type="hidden" name="action" value="prescription">
+        <div class="drfield">
+          <label class="fl">Medications <span style="color:var(--red);">*</span></label>
+          <textarea name="medications" class="fi" rows="3"
+            placeholder="e.g. Aspirin 75mg, Atorvastatin 20mg, Metoprolol 50mg" required>{{ existing_rx.medications if existing_rx else '' }}</textarea>
+          <div class="fh">List each medication with dosage on a new line or separated by commas</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="drfield">
+              <label class="fl">Dosage &amp; Frequency</label>
+              <textarea name="dosage" class="fi" rows="3" placeholder="e.g. Aspirin: once daily after meals">{{ existing_rx.dosage if existing_rx else '' }}</textarea>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="drfield">
+              <label class="fl">Special Instructions</label>
+              <textarea name="instructions" class="fi" rows="3" placeholder="e.g. Take with water. Monitor BP daily.">{{ existing_rx.instructions if existing_rx else '' }}</textarea>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="drfield">
+              <label class="fl">Prevention &amp; Lifestyle</label>
+              <textarea name="prevention" class="fi" rows="3" placeholder="e.g. Low-sodium diet, 30 min walk daily.">{{ existing_rx.prevention if existing_rx else '' }}</textarea>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="drfield">
+              <label class="fl">Follow-up Instructions</label>
+              <textarea name="follow_up" class="fi" rows="3" placeholder="e.g. Return in 2 weeks with ECG results.">{{ existing_rx.follow_up if existing_rx else '' }}</textarea>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:6px;">
+          <button type="submit" class="bp" style="padding:10px 28px;">
+            <i class="fas fa-paper-plane"></i>
+            {{ 'Update Prescription' if existing_rx else 'Send Prescription to Patient' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* Risk bar */
+setTimeout(function(){ document.getElementById('rhFill').style.width='{{ report.risk_score }}%'; }, 300);
+
+/* Mini gauge in hero */
+(function(){
+  var ctx = document.getElementById('miniGauge').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: { datasets: [{ data: [{{ report.risk_score }}, {{ 100 - report.risk_score }}],
+      backgroundColor: ['rgba(255,255,255,0.8)','rgba(255,255,255,0.15)'],
+      borderWidth: 0, circumference: 180, rotation: -90 }] },
+    options: { cutout: '70%', plugins: { legend:{display:false}, tooltip:{enabled:false} },
+      animation: { duration: 1200, easing: 'easeOutQuart' } }
+  });
+})();
+
+/* Feature importance chart */
+(function(){
+  var features = {{ features | tojson }};
+  var importance = {{ importance | tojson }};
+  var idx = importance.map(function(v,i){return i;}).sort(function(a,b){return importance[b]-importance[a];});
+  var sf = idx.slice(0,6).map(function(i){return features[i];});
+  var sv = idx.slice(0,6).map(function(i){return (importance[i]*100).toFixed(1);});
+  var bc = sv.map(function(v){return parseFloat(v)>20?'#1a6fc4':parseFloat(v)>12?'#2281df':'#93c5e4';});
+  new Chart(document.getElementById('featureBar').getContext('2d'), {
+    type: 'bar',
+    data: { labels: sf, datasets: [{ data: sv, backgroundColor: bc, borderRadius: 5, borderSkipped: false }] },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend:{display:false} },
+      scales: {
+        x: { grid:{color:'#f1f5f9'}, ticks:{callback:function(v){return v+'%';}, font:{size:10}}, beginAtZero:true },
+        y: { grid:{display:false}, ticks:{font:{size:10,weight:'600'}, color:'#334155'} }
+      },
+      animation: { duration: 900 }
+    }
+  });
+})();
+</script>
+{% endblock %}

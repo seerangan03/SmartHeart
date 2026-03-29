@@ -1,0 +1,67 @@
+{% if session.user_role == 'patient' %}
+<div class="sb-overlay" id="sb-overlay"></div>
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-mark"><i class="fas fa-heartbeat"></i></div>
+    <span class="sb-name">Smart<span>Heart</span></span>
+    <span class="sb-tag">AI</span>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sec">Overview</div>
+    <a href="/patient/dashboard" class="sb-link{% if active=='dashboard' %} active{% endif %}"><i class="fas fa-house"></i>Dashboard</a>
+    <div class="sb-sec">Assessment</div>
+    <a href="/patient/assess"      class="sb-link{% if active=='assess' %} active{% endif %}"><i class="fas fa-stethoscope"></i>Manual Assessment</a>
+    <a href="/patient/scan-upload" class="sb-link{% if active=='scan' %} active{% endif %}"><i class="fas fa-file-waveform"></i>Upload Scan Report</a>
+    <div class="sb-sec">Records</div>
+    <a href="/patient/reports"       class="sb-link{% if active=='reports' %} active{% endif %}"><i class="fas fa-clipboard-list"></i>My Reports</a>
+    <a href="/patient/prescriptions" class="sb-link{% if active=='prescriptions' %} active{% endif %}">
+      <i class="fas fa-prescription-bottle-medical"></i>Prescriptions
+      {% if unread_rx is defined and unread_rx and unread_rx > 0 %}<span class="sb-badge">{{ unread_rx }}</span>{% endif %}
+    </a>
+    <a href="/patient/profile" class="sb-link{% if active=='profile' %} active{% endif %}"><i class="fas fa-user-circle"></i>Profile</a>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="sb-av">{{ session.user_name[0]|upper }}</div>
+      <div>
+        <div class="sb-uname">{{ session.user_name|truncate(18,true,'') }}</div>
+        <div class="sb-urole">Patient</div>
+      </div>
+      <a href="/logout" class="sb-out" title="Logout"><i class="fas fa-arrow-right-from-bracket"></i></a>
+    </div>
+  </div>
+</aside>
+
+{% else %}
+<div class="sb-overlay" id="sb-overlay"></div>
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-mark"><i class="fas fa-heartbeat"></i></div>
+    <span class="sb-name">Smart<span>Heart</span></span>
+    <span class="sb-tag">MD</span>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sec">Overview</div>
+    <a href="/doctor/dashboard" class="sb-link{% if active=='dashboard' %} active{% endif %}">
+      <i class="fas fa-house"></i>Dashboard
+    </a>
+    <div class="sb-sec">Alerts</div>
+    <a href="/doctor/notifications" class="sb-link{% if active=='notifications' %} active{% endif %}">
+      <i class="fas fa-bell"></i>Notifications
+      {% if unread_notif is defined and unread_notif and unread_notif > 0 %}<span class="sb-badge">{{ unread_notif }}</span>{% endif %}
+    </a>
+    <div class="sb-sec">Patients</div>
+    <a href="/doctor/patients" class="sb-link{% if active=='patients' %} active{% endif %}"><i class="fas fa-users"></i>All Patients</a>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="sb-av">{{ session.user_name[0]|upper }}</div>
+      <div>
+        <div class="sb-uname">{{ session.user_name|truncate(18,true,'') }}</div>
+        <div class="sb-urole">Physician</div>
+      </div>
+      <a href="/logout" class="sb-out" title="Logout"><i class="fas fa-arrow-right-from-bracket"></i></a>
+    </div>
+  </div>
+</aside>
+{% endif %}

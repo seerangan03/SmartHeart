@@ -1,0 +1,146 @@
+{% set active = 'prescriptions' %}
+{% extends "base.html" %}
+{% block title %}Prescription — {{ report.ref_id }}{% endblock %}
+
+{% block body %}
+{% include '_sidebar.html' %}
+
+<header class="topbar">
+    <button class="hmbg" aria-label="Menu"><i class="fas fa-bars"></i></button>
+    <div class="tb-left">
+        <div class="tb-title">Doctor Prescription</div>
+        <div class="tb-sub">
+            <a href="/patient/prescriptions" style="color:var(--blue);text-decoration:none;">Prescriptions</a>
+            <span style="color:var(--muted);margin:0 5px;">/</span>
+            <span style="font-family:'SF Mono','Fira Code',monospace;font-size:11.5px;">{{ report.ref_id }}</span>
+        </div>
+    </div>
+    <div class="tb-right">
+        <a href="/patient/prescriptions" class="btn-g"><i class="fas fa-arrow-left"></i> Back</a>
+        <a href="/patient/reports" class="btn-g"><i class="fas fa-clipboard-list"></i> My Reports</a>
+    </div>
+</header>
+
+<main class="pw pe">
+
+    <!-- PRESCRIPTION HEADER BANNER -->
+    <div style="background:linear-gradient(105deg,#0d1f35 0%,#1e3d63 100%);border-radius:14px;color:#fff;position:relative;overflow:hidden;margin-bottom:20px;box-shadow:0 8px 32px rgba(8,23,46,.18);">
+        <div style="position:absolute;right:-30px;top:-30px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.04);"></div>
+        <div class="cb" style="padding:26px 28px!important;">
+            <div class="row align-items-center">
+                <div class="col-md-1" style="text-align:center;">
+                    <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:1.6rem;">
+                        <i class="fas fa-prescription"></i>
+                    </div>
+                </div>
+                <div class="col-md-5" style="padding-left:20px;">
+                    <div style="font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:4px;font-weight:700;">Prescription from</div>
+                    <div style="font-size:20px;font-weight:800;margin-bottom:2px;">{{ rx.doctor_name }}</div>
+                    <div style="font-size:12.5px;color:rgba(255,255,255,.5);">Issued {{ rx.created_at[:16] }}</div>
+                </div>
+                <div class="col-md-3" style="text-align:center;border-left:1px solid rgba(255,255,255,.1);border-right:1px solid rgba(255,255,255,.1);padding:10px;">
+                    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.45);margin-bottom:4px;font-weight:700;">Report Reference</div>
+                    <div style="font-family:'SF Mono','Fira Code',monospace;font-size:13px;color:#93c5fd;">{{ report.ref_id }}</div>
+                </div>
+                <div class="col-md-3" style="text-align:center;">
+                    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.45);margin-bottom:4px;font-weight:700;">Risk Level</div>
+                    <div style="font-size:22px;font-weight:800;margin-bottom:2px;">{{ report.risk_score|round(1) }}%</div>
+                    <span style="font-size:11.5px;padding:3px 10px;border-radius:5px;font-weight:700;
+                        background:{% if report.severity=='Low' %}rgba(22,163,74,.3){% elif report.severity=='Moderate' %}rgba(202,138,4,.3){% elif report.severity=='High' %}rgba(234,88,12,.3){% else %}rgba(220,38,38,.3){% endif %};
+                        color:{% if report.severity=='Low' %}#86efac{% elif report.severity=='Moderate' %}#fde68a{% elif report.severity=='High' %}#fdba74{% else %}#fca5a5{% endif %};">
+                        {{ report.severity }} Risk
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <!-- Medications -->
+        <div class="col-md-6">
+            <div class="card h-100" style="border-left:4px solid var(--blue)!important;">
+                <div class="ch">
+                    <i class="fas fa-pills" style="color:var(--blue);"></i> Prescribed Medications
+                </div>
+                <div class="cb">
+                    <p style="font-size:14px;color:#1e293b;line-height:1.8;white-space:pre-line;margin:0;">{{ rx.medications or '—' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dosage -->
+        {% if rx.dosage %}
+        <div class="col-md-6">
+            <div class="card h-100" style="border-left:4px solid var(--yellow)!important;">
+                <div class="ch">
+                    <i class="fas fa-clock" style="color:var(--yellow);"></i> Dosage &amp; Frequency
+                </div>
+                <div class="cb">
+                    <p style="font-size:14px;color:#1e293b;line-height:1.8;white-space:pre-line;margin:0;">{{ rx.dosage }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Instructions -->
+        {% if rx.instructions %}
+        <div class="col-md-6">
+            <div class="card h-100" style="border-left:4px solid #7c3aed!important;">
+                <div class="ch">
+                    <i class="fas fa-circle-info" style="color:#7c3aed;"></i> Special Instructions
+                </div>
+                <div class="cb">
+                    <p style="font-size:14px;color:#1e293b;line-height:1.8;white-space:pre-line;margin:0;">{{ rx.instructions }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Prevention -->
+        {% if rx.prevention %}
+        <div class="col-md-6">
+            <div class="card h-100" style="border-left:4px solid var(--green)!important;">
+                <div class="ch">
+                    <i class="fas fa-heart" style="color:var(--green);"></i> Prevention &amp; Lifestyle Advice
+                </div>
+                <div class="cb">
+                    <p style="font-size:14px;color:#1e293b;line-height:1.8;white-space:pre-line;margin:0;">{{ rx.prevention }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Follow-up -->
+        {% if rx.follow_up %}
+        <div class="col-12">
+            <div class="card" style="border-left:4px solid var(--orange)!important;">
+                <div class="ch">
+                    <i class="fas fa-calendar-check" style="color:var(--orange);"></i> Follow-up Instructions
+                </div>
+                <div class="cb">
+                    <p style="font-size:14px;color:#1e293b;line-height:1.8;white-space:pre-line;margin:0;">{{ rx.follow_up }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Disclaimer + Actions -->
+    <div class="card mb-4" style="background:var(--yellow-bg);border:1px solid #fde68a!important;">
+        <div class="cb" style="padding:14px 18px!important;">
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+                <i class="fas fa-triangle-exclamation" style="color:var(--yellow);margin-top:2px;flex-shrink:0;"></i>
+                <p style="font-size:13px;color:#78350f;margin:0;line-height:1.6;">
+                    <strong>Medical Disclaimer:</strong> This prescription is issued digitally by your assigned physician through SmartHeart. Please follow the instructions carefully. Contact your doctor immediately if you experience any adverse effects. Do not self-medicate or alter dosages without physician approval.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center">
+        <a href="/patient/prescriptions" class="bo"><i class="fas fa-arrow-left"></i> All Prescriptions</a>
+        <a href="/patient/reports" class="bo"><i class="fas fa-clipboard-list"></i> My Reports</a>
+    </div>
+
+</main>
+{% endblock %}

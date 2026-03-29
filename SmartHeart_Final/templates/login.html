@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartHeart — {{ role|title }} Portal</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #08172e; --navy2: #0f2545; --blue: #1a6fc4; --blue2: #2281df;
+      --slate: #4e6080; --muted: #7c94b2; --border: #dce6f0; --bg: #eef2f7;
+      --f: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    body {
+      font-family: var(--f);
+      background: linear-gradient(138deg, #06101e 0%, #0d2240 55%, #163660 100%);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── CARD ── */
+    .auth-card {
+      display: flex; width: 100%; max-width: 920px;
+      background: #fff; border-radius: 20px;
+      overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,.45);
+      min-height: 560px;
+    }
+
+    /* ── SIDE PANEL ── */
+    .auth-side {
+      width: 310px; flex-shrink: 0;
+      background: linear-gradient(160deg, #06101e 0%, #0d2240 55%, #163660 100%);
+      padding: 44px 30px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; color: #fff;
+    }
+    .side-icon {
+      width: 76px; height: 76px; border-radius: 50%;
+      background: rgba(255,255,255,.09); border: 2px solid rgba(255,255,255,.14);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.9rem; margin-bottom: 22px;
+      animation: iconPulse 2.6s ease-in-out infinite;
+    }
+    @keyframes iconPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(34,129,223,.4); }
+      50%      { box-shadow: 0 0 0 18px rgba(34,129,223,0); }
+    }
+    .side-title { font-size: 1.45rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -.3px; }
+    .side-desc  { color: rgba(255,255,255,.46); font-size: .84rem; line-height: 1.72; margin-bottom: 28px; }
+    .side-feats { width: 100%; text-align: left; }
+    .side-feat  { display: flex; align-items: center; gap: 10px; padding: 7px 0; color: rgba(255,255,255,.6); font-size: .82rem; }
+    .side-feat i { color: #5bc4ff; width: 16px; text-align: center; flex-shrink: 0; }
+    .back-lnk   { margin-top: 32px; color: rgba(255,255,255,.3); font-size: .78rem; text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color .2s; }
+    .back-lnk:hover { color: #5bc4ff; }
+
+    /* ── FORM PANEL ── */
+    .auth-panel {
+      flex: 1; padding: 42px 38px;
+      display: flex; flex-direction: column; justify-content: center;
+      overflow-y: auto;
+    }
+    .brand { display: flex; align-items: center; gap: 7px; font-size: .88rem; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+    .brand i { color: #e74c3c; }
+    .panel-h  { font-size: 1.55rem; font-weight: 800; color: var(--navy); letter-spacing: -.4px; margin-bottom: 3px; }
+    .panel-s  { color: var(--slate); font-size: .87rem; margin-bottom: 22px; }
+
+    /* ── FLASH ── */
+    .fmsg { border-radius: 8px; padding: 10px 14px; font-size: .86rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .fmsg-success { background: #dcfce7; color: #14532d; }
+    .fmsg-danger  { background: #fee2e2; color: #7f1d1d; }
+    .fmsg-warning { background: #fef3c7; color: #78350f; }
+    .fmsg-info    { background: #dbeafe; color: #1e3a5f; }
+
+    /* ── TAB BAR ── */
+    .tabs { display: flex; background: #f0f4f9; border-radius: 9px; padding: 4px; gap: 4px; margin-bottom: 20px; }
+    .tab  { flex: 1; padding: 9px 12px; border: none; border-radius: 6px; background: transparent; color: var(--slate); font-family: var(--f); font-size: .85rem; font-weight: 600; cursor: pointer; transition: all .18s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .tab.on { background: #fff; color: var(--navy); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+
+    /* ── FORM SECTIONS ── */
+    .fsec { display: none; }
+    .fsec.on { display: block; }
+
+    /* ── FIELDS ── */
+    .fg { margin-bottom: 12px; }
+    .fl { display: block; font-size: .79rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .fi {
+      width: 100%; padding: 10px 13px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: .9rem; font-family: var(--f); color: #1e293b; background: #fff;
+      outline: none; transition: border-color .15s, box-shadow .15s;
+    }
+    .fi:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,111,196,.1); }
+    .fi::placeholder { color: #b0bec5; }
+    select.fi { appearance: none; cursor: pointer; padding-right: 34px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+    .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── SUBMIT ── */
+    .sbtn {
+      width: 100%; padding: 12px 16px; border: none; border-radius: 9px;
+      background: linear-gradient(135deg, #1a6fc4, #1255a0);
+      color: #fff; font-family: var(--f); font-size: .95rem; font-weight: 700;
+      cursor: pointer; transition: all .2s; margin-top: 6px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .sbtn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(26,111,196,.35); }
+    .sbtn:active { transform: none; }
+
+    /* ── DOCTOR REGISTER NOTE ── */
+    .dr-note {
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      border-radius: 9px; padding: 12px 16px; margin-bottom: 16px;
+      border-left: 4px solid var(--blue);
+    }
+    .dr-note p { margin: 0; font-size: .82rem; color: var(--slate); line-height: 1.65; }
+    .dr-note strong { color: var(--navy); display: block; margin-bottom: 3px; font-size: .83rem; }
+
+    @media (max-width: 680px) {
+      body { padding: 12px; }
+      .auth-card { flex-direction: column; min-height: auto; }
+      .auth-side { width: 100%; padding: 24px 20px; min-height: auto; }
+      .side-desc, .side-feats { display: none; }
+      .auth-panel { padding: 24px 20px; }
+      .frow { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="auth-card">
+
+  <!-- SIDE PANEL -->
+  <div class="auth-side">
+    <div class="side-icon">
+      {% if role=='doctor' %}<i class="fas fa-user-md"></i>{% else %}<i class="fas fa-user-injured"></i>{% endif %}
+    </div>
+    <div class="side-title">{{ role|title }} Portal</div>
+    <div class="side-desc">
+      {% if role=='doctor' %}Manage patient cardiac assessments, send prescriptions, and monitor high-risk cases in real time.
+      {% else %}Assess your heart health with AI prediction, upload scan reports, and receive instant risk analysis.{% endif %}
+    </div>
+    <div class="side-feats">
+      {% if role=='doctor' %}
+      <div class="side-feat"><i class="fas fa-chart-line"></i> Live Dashboard Analytics</div>
+      <div class="side-feat"><i class="fas fa-bell"></i> Real-time Patient Alerts</div>
+      <div class="side-feat"><i class="fas fa-prescription"></i> Send Prescriptions</div>
+      <div class="side-feat"><i class="fas fa-users"></i> Manage All Patients</div>
+      {% else %}
+      <div class="side-feat"><i class="fas fa-heartbeat"></i> AI Cardiac Risk Assessment</div>
+      <div class="side-feat"><i class="fas fa-upload"></i> Upload Scan Reports</div>
+      <div class="side-feat"><i class="fas fa-prescription-bottle-medical"></i> View Doctor Prescriptions</div>
+      <div class="side-feat"><i class="fas fa-file-pdf"></i> Download PDF Reports</div>
+      {% endif %}
+    </div>
+    <a href="/" class="back-lnk"><i class="fas fa-arrow-left"></i> Back to Home</a>
+  </div>
+
+  <!-- FORM PANEL -->
+  <div class="auth-panel">
+    <div class="brand"><i class="fas fa-heartbeat"></i> SmartHeart</div>
+    <div class="panel-h">{% if role=='doctor' %}Doctor Portal{% else %}Patient Portal{% endif %}</div>
+    <div class="panel-s">Sign in or create a {{ role }} account to continue</div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+    <div class="fmsg fmsg-{{ cat }}">
+      <i class="fas fa-{% if cat=='success' %}check-circle{% elif cat=='danger' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+      {{ msg }}
+    </div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <!-- Tab Bar -->
+    <div class="tabs">
+      <button class="tab on" id="tab-login" type="button" onclick="sw('login')">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+      </button>
+      <button class="tab" id="tab-reg" type="button" onclick="sw('register')">
+        <i class="fas fa-user-plus"></i> Register
+      </button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div class="fsec on" id="sec-login">
+      <form method="POST" action="/login/{{ role }}">
+        <input type="hidden" name="action" value="login">
+        <div class="fg">
+          <label class="fl">Email Address</label>
+          <input type="email" name="email" class="fi" placeholder="your@email.com" required autocomplete="email">
+        </div>
+        <div class="fg">
+          <label class="fl">Password</label>
+          <input type="password" name="password" class="fi" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="sbtn"><i class="fas fa-sign-in-alt"></i> Sign In as {{ role|title }}</button>
+      </form>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div class="fsec" id="sec-reg">
+      {% if role=='doctor' %}
+      <div class="dr-note">
+        <strong><i class="fas fa-shield-halved me-1"></i> Doctor Account Registration</strong>
+        <p>Create your doctor account to access the clinical dashboard, manage patient reports, and send prescriptions.</p>
+      </div>
+      {% endif %}
+      <form method="POST" action="/login/{{ role }}">
+        <input type="hidden" name="action" value="register">
+        <div class="frow">
+          <div class="fg">
+            <label class="fl">Full Name *</label>
+            <input type="text" name="reg_name" class="fi" placeholder="{% if role=='doctor' %}Dr. Jane Smith{% else %}John Doe{% endif %}" required>
+          </div>
+          <div class="fg">
+            <label class="fl">Phone</label>
+            <input type="tel" name="reg_phone" class="fi" placeholder="+1 800 000 0000">
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Email Address *</label>
+          <input type="email" name="reg_email" class="fi" placeholder="your@email.com" required autocomplete="email">
+        </div>
+        {% if role=='doctor' %}
+        <div class="fg">
+          <label class="fl">Specialization</label>
+          <input type="text" name="reg_specialization" class="fi" placeholder="e.g. Cardiologist, General Practice">
+        </div>
+        {% else %}
+        <div class="frow">
+          <div class="fg">
+            <label class="fl">Date of Birth</label>
+            <input type="date" name="reg_dob" class="fi">
+          </div>
+          <div class="fg">
+            <label class="fl">Gender</label>
+            <select name="reg_gender" class="fi">
+              <option value="">Select gender</option>
+              <option>Male</option><option>Female</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        {% endif %}
+        <div class="frow">
+          <div class="fg">
+            <label class="fl">Password *</label>
+            <input type="password" name="reg_password" class="fi" placeholder="Min. 6 characters" required autocomplete="new-password">
+          </div>
+          <div class="fg">
+            <label class="fl">Confirm Password *</label>
+            <input type="password" name="reg_confirm" class="fi" placeholder="Repeat password" required autocomplete="new-password">
+          </div>
+        </div>
+        <button type="submit" class="sbtn"><i class="fas fa-user-plus"></i> Create {{ role|title }} Account</button>
+      </form>
+    </div>
+  </div><!-- /auth-panel -->
+
+</div><!-- /auth-card -->
+
+<script>
+function sw(tab){
+  var isReg=(tab==='register');
+  document.getElementById('tab-login').classList.toggle('on',!isReg);
+  document.getElementById('tab-reg').classList.toggle('on',isReg);
+  document.getElementById('sec-login').classList.toggle('on',!isReg);
+  document.getElementById('sec-reg').classList.toggle('on',isReg);
+}
+/* Restore last tab after server-side redirect */
+(function(){
+  var last=sessionStorage.getItem('sh_tab');
+  if(last==='register'){sw('register');}
+  sessionStorage.removeItem('sh_tab');
+  document.querySelector('#sec-login form').addEventListener('submit',function(){sessionStorage.setItem('sh_tab','login');});
+  document.querySelector('#sec-reg form').addEventListener('submit',function(){sessionStorage.setItem('sh_tab','register');});
+})();
+</script>
+</body>
+</html>

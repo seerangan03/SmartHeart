@@ -1,0 +1,167 @@
+{% set active = 'notifications' %}
+{% extends "base.html" %}
+{% block title %}Patient Notifications{% endblock %}
+
+{% block extra_css %}
+<style>
+.nf-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:10px;overflow:hidden;transition:box-shadow .2s,transform .2s;text-decoration:none;display:block;color:inherit;}
+.nf-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px);color:inherit;}
+.nf-card.unread{border-left:3px solid var(--blue);}
+.nf-card.read{border-left:3px solid transparent;}
+.nf-inner{display:flex;gap:14px;align-items:flex-start;padding:16px 20px;}
+.nf-av{width:44px;height:44px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;}
+.nf-body{flex:1;min-width:0;}
+.nf-hdr{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap;}
+.nf-name{font-weight:700;font-size:14px;color:var(--navy);}
+.nf-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;}
+.nf-msg{font-size:13px;color:var(--slate);margin-bottom:8px;line-height:1.5;}
+.nf-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.nf-time{font-size:11.5px;color:var(--muted);font-family:var(--mono);}
+</style>
+{% endblock %}
+
+{% block body %}
+{% include '_sidebar.html' %}
+
+<header class="topbar">
+  <button class="hmbg" aria-label="Menu"><i class="fas fa-bars"></i></button>
+  <div class="tb-left">
+    <div class="tb-title">Patient Notifications</div>
+    <div class="tb-sub">SmartHeart · Incoming patient assessments & alerts</div>
+  </div>
+  <div class="tb-right">
+    <div class="tb-chip"><i class="fas fa-calendar-day"></i><span class="live-date"></span></div>
+    {% if notifications %}
+    <form method="POST" action="/doctor/notifications/mark-read" style="display:inline;">
+      <button type="submit" class="btn-g"><i class="fas fa-check-double"></i><span class="hide-xs"> Mark all read</span></button>
+    </form>
+    {% endif %}
+    <a href="/doctor/dashboard" class="btn-g"><i class="fas fa-arrow-left"></i><span class="hide-xs"> Dashboard</span></a>
+  </div>
+</header>
+
+<main class="pw pe">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ cat }} mb-3"><i class="fas fa-circle-info"></i> {{ msg }}</div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <!-- KPI ROW -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="kpi kpi-blue">
+        <div class="kpi-bar"></div>
+        <div class="kpi-icon"><i class="fas fa-bell"></i></div>
+        <div class="kpi-val">{{ notifications|length }}</div>
+        <div class="kpi-lbl">Total Notifications</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi kpi-red">
+        <div class="kpi-bar"></div>
+        <div class="kpi-icon"><i class="fas fa-envelope-open"></i></div>
+        <div class="kpi-val">{{ unread_notif }}</div>
+        <div class="kpi-lbl">Unread</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi kpi-amber">
+        <div class="kpi-bar"></div>
+        <div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div>
+        <div class="kpi-val">{{ notifications|selectattr('severity','in',['High','Critical'])|list|length }}</div>
+        <div class="kpi-lbl">High / Critical</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi kpi-green">
+        <div class="kpi-bar"></div>
+        <div class="kpi-icon"><i class="fas fa-users"></i></div>
+        <div class="kpi-val">{{ notifications|map(attribute='patient_name')|list|unique|list|length }}</div>
+        <div class="kpi-lbl">Unique Patients</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTER + NOTIFICATIONS -->
+  <div class="row g-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="ch">
+          <i class="fas fa-bell" style="color:var(--yellow);"></i>
+          All Notifications
+          {% if unread_notif > 0 %}<span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:var(--mono);">{{ unread_notif }} unread</span>{% endif %}
+          {% if notifications %}
+          <form method="POST" action="/doctor/notifications/mark-read" style="margin-left:auto;">
+            <button type="submit" style="font-size:12px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:var(--f);font-weight:600;padding:0;white-space:nowrap;"><i class="fas fa-check-double me-1"></i>Mark all read</button>
+          </form>
+          {% endif %}
+        </div>
+        <div class="cb" style="padding:16px!important;">
+          {% if notifications %}
+            <!-- Unread first -->
+            {% set unread_list = notifications|selectattr('is_read','equalto',0)|list %}
+            {% set read_list   = notifications|selectattr('is_read','ne',0)|list %}
+
+            {% if unread_list %}
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:4px 6px 10px;font-family:var(--mono);">New — {{ unread_list|length }}</div>
+            {% for n in unread_list %}
+            <a href="/doctor/notification/{{ n.id }}/view" class="nf-card unread">
+              <div class="nf-inner">
+                <div class="nf-av" style="background:{% if n.severity=='Critical' %}var(--red){% elif n.severity=='High' %}var(--orange){% elif n.severity=='Moderate' %}var(--yellow){% else %}var(--green){% endif %};">{{ n.patient_name[0]|upper }}</div>
+                <div class="nf-body">
+                  <div class="nf-hdr">
+                    <span class="nf-name">{{ n.patient_name }}</span>
+                    <span class="nf-dot"></span>
+                    <span style="font-size:10px;background:var(--sky);color:var(--blue);padding:2px 7px;border-radius:4px;font-weight:700;font-family:var(--mono);">NEW</span>
+                    <span class="rp rp-{{ n.severity }}" style="font-size:10px;"><span class="dot"></span>{{ n.severity }}</span>
+                    <span style="font-size:11px;background:{% if n.input_method=='scan' %}#f3e8ff{% else %}var(--sky){% endif %};color:{% if n.input_method=='scan' %}#7c3aed{% else %}var(--blue){% endif %};padding:2px 8px;border-radius:4px;font-weight:600;">{{ n.input_method|title }}</span>
+                  </div>
+                  <div class="nf-msg">{{ n.message }}</div>
+                  <div class="nf-foot">
+                    <span class="nf-time"><i class="fas fa-clock me-1"></i>{{ n.created_at[:16] }}</span>
+                    <span class="mono" style="font-size:10.5px;">{{ n.ref_id }}</span>
+                    <span class="bp bxs" style="margin-left:auto;"><i class="fas fa-eye"></i> Review Report</span>
+                  </div>
+                </div>
+              </div>
+            </a>
+            {% endfor %}
+            {% endif %}
+
+            {% if read_list %}
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:14px 6px 10px;font-family:var(--mono);">Earlier — {{ read_list|length }}</div>
+            {% for n in read_list %}
+            <a href="/doctor/notification/{{ n.id }}/view" class="nf-card read">
+              <div class="nf-inner">
+                <div class="nf-av" style="background:{% if n.severity=='Critical' %}var(--red){% elif n.severity=='High' %}var(--orange){% elif n.severity=='Moderate' %}var(--yellow){% else %}var(--green){% endif %};opacity:.7;">{{ n.patient_name[0]|upper }}</div>
+                <div class="nf-body">
+                  <div class="nf-hdr">
+                    <span class="nf-name" style="color:var(--slate);">{{ n.patient_name }}</span>
+                    <span class="rp rp-{{ n.severity }}" style="font-size:10px;"><span class="dot"></span>{{ n.severity }}</span>
+                    <span style="font-size:11px;background:#f1f5f9;color:var(--slate);padding:2px 8px;border-radius:4px;font-weight:600;">{{ n.input_method|title }}</span>
+                  </div>
+                  <div class="nf-msg" style="color:var(--muted);">{{ n.message }}</div>
+                  <div class="nf-foot">
+                    <span class="nf-time"><i class="fas fa-clock me-1"></i>{{ n.created_at[:16] }}</span>
+                    <span class="mono" style="font-size:10.5px;">{{ n.ref_id }}</span>
+                    <span class="bo bxs" style="margin-left:auto;"><i class="fas fa-eye"></i> View</span>
+                  </div>
+                </div>
+              </div>
+            </a>
+            {% endfor %}
+            {% endif %}
+
+          {% else %}
+          <div class="es" style="padding:60px 20px;">
+            <span class="es-icon"><i class="fas fa-bell-slash"></i></span>
+            <h5>No notifications yet</h5>
+            <p>You'll be notified when patients submit new cardiac assessments.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

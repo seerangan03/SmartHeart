@@ -1,0 +1,284 @@
+{% set active = 'dashboard' %}
+{% extends "base.html" %}
+{% block title %}Physician Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.notif-item{display:flex;gap:12px;align-items:flex-start;padding:14px 18px;border-bottom:1px solid #eef2f7;cursor:pointer;transition:background .1s;text-decoration:none;color:inherit;display:block;}
+.notif-item:hover .ni-inner{background:#f8fafc;}
+.ni-inner{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:10px;transition:background .1s;}
+.ni-av{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;}
+.ni-meta{flex:1;min-width:0;}
+.ni-name{font-weight:700;font-size:13px;color:var(--navy);display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.ni-msg{font-size:12px;color:var(--slate);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ni-tags{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.ni-dot{width:7px;height:7px;border-radius:50%;background:var(--blue);flex-shrink:0;}
+.unread-notif{background:#f0f6ff;}
+</style>
+{% endblock %}
+
+{% block body %}
+{% include '_sidebar.html' %}
+
+<header class="topbar">
+  <button class="hmbg" aria-label="Menu"><i class="fas fa-bars"></i></button>
+  <div class="tb-left">
+    <div class="tb-title">Physician Dashboard</div>
+    <div class="tb-sub">SmartHeart · Cardiac Intelligence Platform</div>
+  </div>
+  <div class="tb-right">
+    <div class="tb-chip"><i class="fas fa-calendar-day"></i><span class="live-date"></span></div>
+    <a href="/doctor/notifications" class="btn-g" style="position:relative;">
+      <i class="fas fa-bell"></i><span class="hide-xs"> Notifications</span>
+      {% if unread_notif and unread_notif > 0 %}<span style="position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;font-family:var(--mono);">{{ unread_notif }}</span>{% endif %}
+    </a>
+    <a href="/doctor/patients" class="btn-p"><i class="fas fa-users"></i><span class="hide-xs"> All Patients</span></a>
+  </div>
+</header>
+
+<main class="pw pe">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ cat }} mb-3"><i class="fas fa-circle-info"></i> {{ msg }}</div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <!-- WELCOME BANNER -->
+  <div class="wbanner mb-4">
+    <div class="wbanner-deco"></div>
+    <div style="position:relative;">
+      <div class="wbanner-label">Physician Portal</div>
+      <div class="wbanner-title">Good {{ 'morning' if now_hour < 12 else ('afternoon' if now_hour < 17 else 'evening') }}, Dr. {{ session.user_name.split(' ')[-1] }}</div>
+      <p class="wbanner-sub">
+        {{ stats.total_reports }} total assessment(s) on record.
+        {% if stats.high_risk > 0 %}<span style="color:#fca5a5;font-weight:600;">{{ stats.high_risk }} high/critical case(s) need attention.</span>{% else %}No critical cases — all patients stable.{% endif %}
+        {% if unread_notif and unread_notif > 0 %}<span style="color:#fcd34d;font-weight:600;margin-left:8px;"><i class="fas fa-bell"></i> {{ unread_notif }} unread notification(s).</span>{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <!-- KPI ROW -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+      <div class="kpi kpi-blue">
+        <div class="kpi-bar"></div>
+        <div class="kpi-icon"><i class="fas fa-users"></i></div>
+        <div class="kpi-val">{{ stats.total_patients }}</div>
+        <div class="kpi-lbl">Total Patients</div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="kpi kpi-red">
+        <div class="kpi-bar"></div>
+        <div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div>
+        <div class="kpi-val">{{ stats.high_risk }}</div>
+        <div class="kpi-lbl">High / Critical</div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="kpi kpi-green">
+        <div class="kpi-bar"></div>
+        <div class="kpi-icon"><i class="fas fa-file-waveform"></i></div>
+        <div class="kpi-val">{{ stats.total_reports }}</div>
+        <div class="kpi-lbl">Total Reports</div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="kpi kpi-amber">
+        <div class="kpi-bar"></div>
+        <div class="kpi-icon"><i class="fas fa-calendar-check"></i></div>
+        <div class="kpi-val">{{ stats.recent_reports }}</div>
+        <div class="kpi-lbl">Reports Today</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MIDDLE ROW: NOTIFICATIONS + CHARTS -->
+  <div class="row g-3 mb-4">
+
+    <!-- RECENT NOTIFICATIONS -->
+    <div class="col-lg-5">
+      <div class="card" style="display:flex;flex-direction:column;height:100%;">
+        <div class="ch">
+          <i class="fas fa-bell" style="color:var(--yellow);"></i>
+          Recent Notifications
+          {% if unread_notif and unread_notif > 0 %}
+          <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:var(--mono);">{{ unread_notif }} new</span>
+          {% endif %}
+          <a href="/doctor/notifications" class="chr" style="font-size:12px;color:var(--blue);text-decoration:none;font-weight:600;">See all <i class="fas fa-arrow-right" style="font-size:10px;"></i></a>
+        </div>
+        <div style="flex:1;overflow-y:auto;max-height:340px;">
+          {% if notifications %}
+            {% for n in notifications %}
+            <a href="/doctor/notification/{{ n.id }}/view" class="notif-item {% if not n.is_read %}unread-notif{% endif %}">
+              <div class="ni-inner">
+                <div class="ni-av" style="background:{% if n.severity=='Critical' %}var(--red){% elif n.severity=='High' %}var(--orange){% elif n.severity=='Moderate' %}var(--yellow){% else %}var(--green){% endif %};">
+                  {{ n.patient_name[0]|upper }}
+                </div>
+                <div class="ni-meta">
+                  <div class="ni-name">
+                    {{ n.patient_name }}
+                    {% if not n.is_read %}<span class="ni-dot"></span>{% endif %}
+                  </div>
+                  <div class="ni-msg">{{ n.message }}</div>
+                  <div class="ni-tags">
+                    <span style="font-size:11px;color:var(--muted);font-family:var(--mono);"><i class="fas fa-clock me-1"></i>{{ n.created_at[:16] }}</span>
+                    <span class="rp rp-{{ n.severity }}" style="font-size:10px;padding:2px 7px;"><span class="dot"></span>{{ n.severity }}</span>
+                    <span style="font-size:10.5px;background:#f1f5f9;color:var(--slate);padding:2px 7px;border-radius:4px;font-weight:600;">{{ n.input_method|title }}</span>
+                  </div>
+                </div>
+              </div>
+            </a>
+            {% endfor %}
+          {% else %}
+          <div class="es" style="padding:40px 20px;">
+            <span class="es-icon"><i class="fas fa-bell-slash"></i></span>
+            <h5>No notifications yet</h5>
+            <p>You'll be alerted when patients submit assessments.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="col-lg-7">
+      <div class="row g-3 h-100">
+        <div class="col-12">
+          <div class="card">
+            <div class="ch"><i class="fas fa-chart-pie" style="color:var(--blue);"></i> Risk Distribution</div>
+            <div class="cb">
+              <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+                <div style="position:relative;width:110px;height:110px;flex-shrink:0;">
+                  <canvas id="donutChart"></canvas>
+                </div>
+                <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:9px;min-width:200px;">
+                  <div style="background:#f0fdf4;border-radius:9px;padding:10px 14px;">
+                    <div style="font-size:10px;color:#16a34a;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;font-family:var(--mono);">Low Risk</div>
+                    <div style="font-size:24px;font-weight:800;color:#15803d;font-family:'Fraunces',serif;" id="cnt-low">0</div>
+                  </div>
+                  <div style="background:#fffbeb;border-radius:9px;padding:10px 14px;">
+                    <div style="font-size:10px;color:#d97706;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;font-family:var(--mono);">Moderate</div>
+                    <div style="font-size:24px;font-weight:800;color:#92400e;font-family:'Fraunces',serif;" id="cnt-mod">0</div>
+                  </div>
+                  <div style="background:#fff7ed;border-radius:9px;padding:10px 14px;">
+                    <div style="font-size:10px;color:#ea580c;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;font-family:var(--mono);">High Risk</div>
+                    <div style="font-size:24px;font-weight:800;color:#9a3412;font-family:'Fraunces',serif;" id="cnt-high">0</div>
+                  </div>
+                  <div style="background:#fef2f2;border-radius:9px;padding:10px 14px;">
+                    <div style="font-size:10px;color:#dc2626;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;font-family:var(--mono);">Critical</div>
+                    <div style="font-size:24px;font-weight:800;color:#991b1b;font-family:'Fraunces',serif;" id="cnt-crit">0</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="card">
+            <div class="ch"><i class="fas fa-brain" style="color:var(--blue);"></i> AI Feature Importance <span style="margin-left:auto;font-size:11px;font-weight:400;color:var(--muted);">Gradient Boosting Model</span></div>
+            <div class="cb" style="padding:14px 18px!important;"><canvas id="featureBar" height="148"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECENT REPORTS TABLE -->
+  <div class="card">
+    <div class="ch">
+      <i class="fas fa-clock-rotate-left" style="color:var(--blue);"></i> Recent Patient Reports
+      <a href="/doctor/patients" class="chr" style="font-size:12px;color:var(--blue);text-decoration:none;font-weight:600;">View all <i class="fas fa-arrow-right" style="font-size:10px;"></i></a>
+    </div>
+    <div class="cb p0">
+      <div class="tw">
+        <table class="tbl">
+          <thead>
+            <tr><th>Patient</th><th>Report ID</th><th>Date</th><th>Method</th><th>BP</th><th>Risk %</th><th>Severity</th><th>Rx</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for r in reports %}
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:9px;">
+                  <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),#1258a8);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;flex-shrink:0;">{{ r.patient_name[0]|upper }}</div>
+                  <div>
+                    <div style="font-weight:700;color:var(--navy);font-size:13px;">{{ r.patient_name }}</div>
+                    <div style="font-size:11px;color:var(--muted);">{{ r.patient_email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="mono">{{ r.ref_id }}</td>
+              <td style="color:var(--slate);font-size:12px;white-space:nowrap;">{{ r.created_at[:16] }}</td>
+              <td><span style="font-size:11px;padding:3px 9px;border-radius:5px;font-weight:600;background:{% if r.input_method=='scan' %}#f3e8ff{% else %}var(--sky){% endif %};color:{% if r.input_method=='scan' %}#7c3aed{% else %}var(--blue){% endif %};">{{ r.input_method|title }}</span></td>
+              <td style="font-size:13px;white-space:nowrap;font-family:var(--mono);">{{ r.bp }}<span style="color:var(--muted);font-size:10px;"> mmHg</span></td>
+              <td><span style="font-size:16px;font-weight:800;color:{% if r.severity=='Low' %}var(--green){% elif r.severity=='Moderate' %}var(--yellow){% elif r.severity=='High' %}var(--orange){% else %}var(--red){% endif %};font-family:'Fraunces',serif;">{{ r.risk_score|round(1) }}%</span></td>
+              <td><span class="rp rp-{{ r.severity }}"><span class="dot"></span>{{ r.severity }}</span></td>
+              <td>
+                {% if r.doctor_remarks %}<span style="font-size:11px;background:var(--gbg);color:#15803d;padding:3px 9px;border-radius:5px;font-weight:600;white-space:nowrap;"><i class="fas fa-check me-1"></i>Done</span>
+                {% else %}<span style="font-size:11px;background:var(--ybg);color:#92400e;padding:3px 9px;border-radius:5px;font-weight:600;white-space:nowrap;">Pending</span>{% endif %}
+              </td>
+              <td><a href="/doctor/report/{{ r.id }}" class="bp bxs"><i class="fas fa-eye"></i> Review</a></td>
+            </tr>
+            {% endfor %}
+            {% if not reports %}
+            <tr><td colspan="9"><div class="es"><span class="es-icon"><i class="fas fa-file-medical"></i></span><h5>No patient reports yet</h5><p>Reports will appear once patients complete their first assessment.</p></div></td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  var rd = {{ reports | tojson }};
+  var c = {Low:0,Moderate:0,High:0,Critical:0};
+  rd.forEach(function(r){ if(c.hasOwnProperty(r.severity)) c[r.severity]++; });
+  document.getElementById('cnt-low').textContent  = c.Low;
+  document.getElementById('cnt-mod').textContent  = c.Moderate;
+  document.getElementById('cnt-high').textContent = c.High;
+  document.getElementById('cnt-crit').textContent = c.Critical;
+  var total = c.Low+c.Moderate+c.High+c.Critical;
+  new Chart(document.getElementById('donutChart').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['Low','Moderate','High','Critical'],datasets:[{data:[c.Low,c.Moderate,c.High,c.Critical],backgroundColor:['#059669','#ca8a04','#ea580c','#dc2626'],borderWidth:0,hoverOffset:5}]},
+    options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(cx){return ' '+cx.label+': '+cx.raw+' ('+((cx.raw/Math.max(total,1))*100).toFixed(0)+'%)'}}}},animation:{duration:900}}
+  });
+  var features = {{ features | tojson }};
+  var importance = {{ importance | tojson }};
+  var idx = importance.map(function(v,i){return i;}).sort(function(a,b){return importance[b]-importance[a];});
+  var sortF = idx.map(function(i){return features[i];});
+  var sortI = idx.map(function(i){return (importance[i]*100).toFixed(1);});
+  var barC = sortI.map(function(v){return parseFloat(v)>20?'#1a6fc4':parseFloat(v)>12?'#2281df':'#93c5e4';});
+  new Chart(document.getElementById('featureBar').getContext('2d'),{
+    type:'bar',
+    data:{labels:sortF,datasets:[{label:'Importance %',data:sortI,backgroundColor:barC,borderRadius:5,borderSkipped:false}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{color:'#f0f4f8'},ticks:{callback:function(v){return v+'%';},font:{size:11}},beginAtZero:true},y:{grid:{display:false},ticks:{font:{size:11,weight:'600'},color:'#2d3f55'}}},animation:{duration:900}}
+  });
+})();
+</script>
+<script>
+/* ── Auto-refresh notifications every 30 seconds ── */
+(function(){
+  var lastCount = {{ unread_notif or 0 }};
+  function checkNotifs(){
+    fetch('/doctor/api/unread-count', {headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(data){
+        if(!data) return;
+        if(data.count > lastCount){
+          // New notification arrived - refresh page to show it
+          window.location.reload();
+        }
+      }).catch(function(){});
+  }
+  // Poll every 30 seconds
+  setInterval(checkNotifs, 30000);
+})();
+</script>
+{% endblock %}

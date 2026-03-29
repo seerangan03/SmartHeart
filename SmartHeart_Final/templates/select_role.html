@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartHeart | AI Cardiac Intelligence</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--navy:#06132a;--blue:#1a6fc4;--blue2:#2281df;--cyan:#60c8ff;}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--navy);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+
+    /* Mesh background */
+    .mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+    .mesh::before{content:'';position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(34,129,223,.18) 0%,transparent 65%);top:-200px;right:-200px;animation:meshDrift 18s ease-in-out infinite alternate;}
+    .mesh::after{content:'';position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(96,200,255,.12) 0%,transparent 65%);bottom:-100px;left:-100px;animation:meshDrift 14s ease-in-out infinite alternate-reverse;}
+    @keyframes meshDrift{0%{transform:translate(0,0) scale(1);}100%{transform:translate(60px,-40px) scale(1.1);}}
+
+    /* Grid lines */
+    .grid-lines{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.04;
+      background-image:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);
+      background-size:60px 60px;}
+
+    .wrap{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;}
+
+    /* NAV */
+    .lnav{padding:24px 40px;display:flex;align-items:center;justify-content:space-between;}
+    .brand{display:flex;align-items:center;gap:12px;text-decoration:none;}
+    .brand-mark{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#2281df,#0f3f8a);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(34,129,223,.4);}
+    .brand-mark i{color:#fff;font-size:17px;}
+    .brand-text{font-family:'Plus Jakarta Sans',sans-serif;font-size:20px;font-weight:900;color:#fff;letter-spacing:-.3px;}
+    .brand-text span{color:var(--cyan);}
+    .brand-ai{background:rgba(96,200,255,.12);color:var(--cyan);font-size:9px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:1.2px;border:1px solid rgba(96,200,255,.22);font-family:'JetBrains Mono',monospace;}
+    .lnav-right{color:rgba(255,255,255,.38);font-size:12px;display:flex;align-items:center;gap:7px;}
+    .lnav-right i{color:var(--cyan);}
+
+    /* HERO */
+    .hero{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 24px 60px;}
+    .hero-inner{text-align:center;max-width:900px;width:100%;}
+
+    /* Pulse icon */
+    .h-icon{display:inline-flex;align-items:center;justify-content:center;width:80px;height:80px;border-radius:24px;
+      background:linear-gradient(135deg,rgba(220,38,38,.2),rgba(185,28,28,.3));
+      border:1.5px solid rgba(220,38,38,.3);margin-bottom:28px;
+      animation:iconPulse 2.8s ease-in-out infinite;}
+    @keyframes iconPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.3);}50%{box-shadow:0 0 0 20px rgba(220,38,38,0);}}
+    .h-icon i{font-size:2.2rem;color:#f87171;animation:heartBeat 1.4s ease-in-out infinite;}
+    @keyframes heartBeat{0%,100%{transform:scale(1);}14%{transform:scale(1.22);}28%{transform:scale(1);}42%{transform:scale(1.18);}56%{transform:scale(1);}}
+
+    /* ECG bar */
+    .ecg-wrap{margin:0 auto 36px;width:280px;height:42px;position:relative;overflow:hidden;}
+    .ecg-wrap svg{width:100%;height:100%;}
+
+    .hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;}
+    .hero-h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:clamp(2.6rem,5vw,4rem);font-weight:900;color:#fff;line-height:1.05;margin-bottom:18px;letter-spacing:-.02em;}
+    .hero-h1 em{color:var(--cyan);font-style:normal;}
+    .hero-sub{color:rgba(255,255,255,.5);font-size:1.05rem;line-height:1.8;max-width:560px;margin:0 auto 52px;}
+
+    /* FLASH */
+    .flash-zone{margin-bottom:24px;}
+    .flash-msg{background:rgba(254,226,226,.1);border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:12px 16px;color:#fca5a5;font-size:13px;display:flex;align-items:center;gap:10px;}
+
+    /* ROLE CARDS */
+    .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:640px;margin:0 auto 52px;}
+    .role-card{
+      background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:20px;
+      padding:36px 32px;text-align:center;text-decoration:none;color:#fff;
+      transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;
+    }
+    .role-card::before{content:'';position:absolute;inset:0;border-radius:20px;opacity:0;transition:opacity .3s;pointer-events:none;}
+    .role-card.doc::before{background:linear-gradient(135deg,rgba(34,129,223,.2),rgba(14,63,138,.3));}
+    .role-card.pat::before{background:linear-gradient(135deg,rgba(5,150,105,.2),rgba(4,120,87,.3));}
+    .role-card:hover{transform:translateY(-6px);border-color:rgba(255,255,255,.25);box-shadow:0 24px 60px rgba(0,0,0,.4);color:#fff;}
+    .role-card:hover::before{opacity:1;}
+    .role-card:hover .ri{transform:scale(1.12) rotate(-4deg);}
+    .ri{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:1.8rem;transition:transform .3s;}
+    .doc .ri{background:linear-gradient(135deg,#1a6fc4,#0f3f8a);}
+    .pat .ri{background:linear-gradient(135deg,#059669,#047857);}
+    .role-name{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3rem;font-weight:900;margin-bottom:8px;}
+    .role-desc{font-size:12.5px;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:16px;}
+    .role-cta{font-size:12px;font-weight:600;color:rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;}
+    .role-card:hover .role-cta{color:var(--cyan);gap:10px;}
+
+    /* FEATURES STRIP */
+    .feat-strip{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;}
+    .feat{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.3);font-size:12px;}
+    .feat i{color:rgba(96,200,255,.5);font-size:13px;}
+
+    /* FOOTER */
+    .lfooter{text-align:center;padding:20px;color:rgba(255,255,255,.18);font-size:11.5px;position:relative;z-index:2;}
+
+    @media(max-width:600px){
+      .lnav{padding:16px 20px;}
+      .role-grid{grid-template-columns:1fr;max-width:340px;}
+      .feat-strip{gap:20px;}
+      .hero-sub{font-size:.95rem;}
+    }
+  </style>
+</head>
+<body>
+<div class="mesh"></div>
+<div class="grid-lines"></div>
+<div class="wrap">
+  <nav class="lnav">
+    <a href="#" class="brand">
+      <div class="brand-mark"><i class="fas fa-heartbeat"></i></div>
+      <span class="brand-text">Smart<span>Heart</span></span>
+      <span class="brand-ai">AI</span>
+    </a>
+    <div class="lnav-right"><i class="fas fa-shield-halved"></i> Hospital-Grade Security</div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="h-icon"><i class="fas fa-heart"></i></div>
+
+      <div class="ecg-wrap">
+        <svg viewBox="0 0 280 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polyline fill="none" stroke="rgba(96,200,255,.4)" stroke-width="1.5"
+            points="0,21 30,21 40,5 48,37 56,5 64,37 72,21 120,21 130,5 138,37 146,5 154,37 162,21 210,21 220,5 228,37 236,5 244,37 252,21 280,21"/>
+        </svg>
+      </div>
+
+      <div class="hero-eyebrow">AI-Powered · Medical Grade · Instant Results</div>
+      <h1 class="hero-h1"><em>Know Your Heart Risk</em><br>Before It's Too Late</h1>
+      <p class="hero-sub">Clinical-grade AI gives you instant cardiac risk analysis, voice-guided explanations, and physician-reviewed care — all in one secure, easy-to-use system.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="flash-zone">{% for cat,msg in messages %}
+      <div class="flash-msg"><i class="fas fa-exclamation-circle"></i>{{ msg }}</div>
+      {% endfor %}</div>{% endif %}{% endwith %}
+
+      <div class="role-grid">
+        <a href="/login/doctor" class="role-card doc">
+          <div class="ri"><i class="fas fa-user-doctor"></i></div>
+          <div class="role-name">Doctor</div>
+          <div class="role-desc">Patient management, risk reports, prescriptions, real-time notifications</div>
+          <div class="role-cta">Enter Portal <i class="fas fa-arrow-right"></i></div>
+        </a>
+        <a href="/login/patient" class="role-card pat">
+          <div class="ri"><i class="fas fa-user"></i></div>
+          <div class="role-name">Patient</div>
+          <div class="role-desc">AI cardiac assessment, scan uploads, PDF reports, AI voice analysis</div>
+          <div class="role-cta">Enter Portal <i class="fas fa-arrow-right"></i></div>
+        </a>
+      </div>
+
+      <div class="feat-strip">
+        <div class="feat"><i class="fas fa-brain"></i> ML Prediction</div>
+        <div class="feat"><i class="fas fa-microphone"></i> AI Voice</div>
+        <div class="feat"><i class="fas fa-file-medical"></i> OCR Scans</div>
+        <div class="feat"><i class="fas fa-chart-bar"></i> Live Analytics</div>
+        <div class="feat"><i class="fas fa-mobile-alt"></i> Responsive</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="lfooter">© 2025 SmartHeart Medical AI · All data encrypted · For clinical support use</footer>
+</div>
+</body>
+</html>

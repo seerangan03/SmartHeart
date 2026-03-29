@@ -1,0 +1,734 @@
+{% set active = 'assess' %}
+{% extends "base.html" %}
+{% block title %}Assessment Result — {{ ref_id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Multi-script font support using jsDelivr CDN (works offline-first with cache) */
+@font-face{font-family:'NotoIndic';font-style:normal;font-weight:400 700;
+  src:local('Noto Sans'),local('NotoSans'),local('Noto Sans Tamil'),local('Noto Sans Devanagari'),
+      local('Latha'),local('Mangal'),local('Tunga'),local('Raavi'),local('Shruti'),
+      local('Kalinga'),local('Vrinda'),local('Aparajita');
+  unicode-range:U+0900-097F,U+0980-09FF,U+0A00-0A7F,U+0A80-0AFF,U+0B00-0B7F,U+0B80-0BFF,U+0C00-0C7F,U+0C80-0CFF,U+0D00-0D7F;
+}
+/* All translatable elements inherit a broad font stack */
+[data-lk] {
+  font-family: 'Plus Jakarta Sans', 'NotoIndic', 'Noto Sans',
+    'Noto Sans Tamil', 'Noto Sans Devanagari', 'Noto Sans Telugu',
+    'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Bengali',
+    'Noto Sans Hangul', 'Segoe UI', 'Tahoma', 'Arial Unicode MS',
+    'Latha', 'Mangal', 'Tunga', 'Raavi', 'Shruti', 'Kalinga',
+    system-ui, sans-serif !important;
+}
+/* voice auto-plays on page load — no overlay */
+.play-title{font-size:1.25rem;font-weight:800;color:#fff;margin-bottom:9px;letter-spacing:-.3px;}
+.play-sub{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:30px;line-height:1.65;}
+.play-btn{display:inline-flex;align-items:center;gap:9px;padding:13px 34px;border-radius:10px;background:linear-gradient(135deg,#2281df,#1255a0);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;transition:all .2s;font-family:var(--f);letter-spacing:.2px;}
+.play-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(34,129,223,.5);}
+.play-skip{display:block;margin-top:15px;color:rgba(255,255,255,.28);font-size:12px;cursor:pointer;background:none;border:none;font-family:var(--f);transition:color .2s;}
+.play-skip:hover{color:rgba(255,255,255,.6);}
+@keyframes ovFade{from{opacity:0;}to{opacity:1;}}
+
+/* ══ LANGUAGE DROPDOWN ══ */
+.lang-wrap{position:relative;display:inline-flex;align-items:center;}
+.lang-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--slate);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--f);white-space:nowrap;line-height:1;}
+.lang-btn:hover,.lang-wrap.open .lang-btn{border-color:var(--blue);color:var(--blue);}
+.lang-chevron{font-size:10px;transition:transform .2s;}
+.lang-wrap.open .lang-chevron{transform:rotate(180deg);}
+.lang-menu{position:absolute;top:calc(100% + 7px);right:0;background:#fff;border:1px solid var(--border);border-radius:11px;box-shadow:0 16px 48px rgba(0,0,0,.13);min-width:210px;z-index:600;overflow:hidden;display:none;}
+.lang-wrap.open .lang-menu{display:block;animation:ddSlide .15s ease;}
+@keyframes ddSlide{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.lang-item{display:flex;align-items:center;gap:11px;padding:9px 15px;font-size:13px;font-weight:500;cursor:pointer;transition:background .1s;color:#1e293b;border:none;background:none;width:100%;text-align:left;font-family:var(--f);}
+.lang-item:hover{background:#f1f5f9;}
+.lang-item.active{background:#eff6ff;color:var(--blue);font-weight:700;}
+.lang-item .fl{font-size:17px;width:24px;text-align:center;flex-shrink:0;}
+.lang-item .nat{font-size:11px;color:var(--muted);margin-left:auto;}
+
+/* ══ VOICE PLAYER ══ */
+.vplayer{background:linear-gradient(112deg,#060f20 0%,#0c1f3d 55%,#162e56 100%);border-radius:14px;padding:17px 20px;display:flex;align-items:center;gap:13px;margin-bottom:22px;border:1px solid rgba(255,255,255,.06);position:relative;overflow:hidden;}
+.vplayer::after{content:'';position:absolute;right:-50px;top:-50px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(34,129,223,.12),transparent 70%);pointer-events:none;}
+.vp-play{width:46px;height:46px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#2281df,#1255a0);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;box-shadow:0 4px 18px rgba(34,129,223,.45);transition:all .2s;z-index:1;}
+.vp-play:hover{transform:scale(1.1);}
+.vp-play.on{background:linear-gradient(135deg,#059669,#047857);box-shadow:0 4px 18px rgba(5,150,105,.5);}
+.vp-info{flex:1;min-width:0;z-index:1;}
+.vp-caption{font-size:9px;color:rgba(255,255,255,.28);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;font-family:var(--mono);}
+.vp-ttl{font-size:12.5px;font-weight:700;color:#fff;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vp-wave{display:flex;align-items:center;gap:3px;height:20px;}
+.wbar{width:3px;border-radius:2px;background:rgba(255,255,255,.15);}
+.wbar.lit{background:#5bc4ff;animation:wb .5s ease-in-out infinite alternate;}
+@keyframes wb{from{height:3px;}to{height:18px;}}
+.wbar:nth-child(1){animation-delay:.00s}.wbar:nth-child(2){animation-delay:.07s}.wbar:nth-child(3){animation-delay:.16s}
+.wbar:nth-child(4){animation-delay:.03s}.wbar:nth-child(5){animation-delay:.12s}.wbar:nth-child(6){animation-delay:.21s}
+.wbar:nth-child(7){animation-delay:.06s}.wbar:nth-child(8){animation-delay:.15s}.wbar:nth-child(9){animation-delay:.25s}
+.wbar:nth-child(10){animation-delay:.02s}.wbar:nth-child(11){animation-delay:.11s}.wbar:nth-child(12){animation-delay:.23s}
+.vp-prog{width:130px;flex-shrink:0;z-index:1;}
+.vp-track{height:3px;background:rgba(255,255,255,.1);border-radius:3px;margin-bottom:6px;}
+.vp-fill{height:100%;background:linear-gradient(90deg,#5bc4ff,#2281df);border-radius:3px;width:0%;transition:width .3s;}
+.vp-times{display:flex;justify-content:space-between;font-size:9.5px;color:rgba(255,255,255,.3);font-family:var(--mono);}
+.vp-acts{display:flex;gap:5px;z-index:1;}
+.vp-act{background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);border:none;border-radius:6px;width:29px;height:29px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;transition:all .14s;}
+.vp-act:hover{background:rgba(255,255,255,.15);color:#fff;}
+
+/* ══ HERO CARD ══ */
+.rhero{border-radius:16px;padding:24px 28px;color:#fff;position:relative;overflow:hidden;margin-bottom:20px;}
+.rhero.sev-Low{background:linear-gradient(118deg,#064e3b,#059669);}
+.rhero.sev-Moderate{background:linear-gradient(118deg,#78350f,#d97706);}
+.rhero.sev-High{background:linear-gradient(118deg,#7c2d12,#ea580c);}
+.rhero.sev-Critical{background:linear-gradient(118deg,#450a0a,#dc2626);}
+.rhero-glow{position:absolute;right:-40px;top:-40px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none;}
+.score-ring{width:88px;height:88px;border-radius:50%;border:2.5px solid rgba(255,255,255,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,.1);backdrop-filter:blur(8px);flex-shrink:0;}
+.score-num{font-size:24px;font-weight:900;line-height:1;}
+.score-sub{font-size:10px;opacity:.55;margin-top:1px;}
+
+/* ══ TRANSLATABLE ELEMENTS ══ */
+[data-lk]{transition:opacity .18s;}
+[data-lk].fading{opacity:0;}
+
+/* ══ VITALS TABLE ══ */
+.vital{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #eef2f8;gap:8px;}
+.vital:last-child{border-bottom:none;}
+.vital-n{font-size:12px;font-weight:600;color:var(--navy);min-width:120px;flex-shrink:0;display:flex;align-items:center;gap:5px;}
+.vital-v{font-size:12.5px;font-weight:700;color:#1a2840;flex:1;min-width:0;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vtag{font-size:10px;padding:3px 10px;border-radius:6px;font-weight:800;font-family:var(--mono);text-transform:uppercase;white-space:nowrap;flex-shrink:0;min-width:72px;text-align:center;letter-spacing:.3px;}
+.vn{background:#dcfce7;color:#15803d;border:1px solid #86efac;font-weight:800;}
+.vw{background:#fef3c7;color:#92400e;border:1px solid #fbbf24;font-weight:800;}
+.vr{background:#fee2e2;color:#b91c1c;border:1px solid #f87171;font-weight:800;}
+
+/* ══ RECS ══ */
+.rec{display:flex;gap:10px;align-items:flex-start;padding:10px 13px;border-radius:9px;background:#f8fafc;border:1px solid var(--border);font-size:12.5px;color:#2d3f55;margin-bottom:7px;line-height:1.55;}
+.rec:last-child{margin-bottom:0;}
+.rec-ic{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px;}
+
+@media(max-width:576px){
+  .rhero{padding:18px 16px;}.score-ring{width:72px;height:72px;}.score-num{font-size:19px;}
+  .vplayer{flex-wrap:wrap;}.vp-prog{display:none;}
+  .lang-menu{right:auto;left:0;}
+}
+</style>
+{% endblock %}
+
+{% block body %}
+{% include '_sidebar.html' %}
+
+<!-- ════ TOPBAR ════ -->
+<header class="topbar">
+  <button class="hmbg" aria-label="Menu"><i class="fas fa-bars"></i></button>
+  <div class="tb-left">
+    <div class="tb-title">Assessment Result</div>
+    <div class="tb-sub">
+      <a href="/patient/dashboard" style="color:var(--blue);text-decoration:none;">Dashboard</a>
+      <span style="color:var(--muted);margin:0 5px;">/</span>
+      <span class="mono">{{ ref_id }}</span>
+    </div>
+  </div>
+  <div class="tb-right">
+    <!-- Language Dropdown -->
+    <div class="lang-wrap" id="langWrap">
+      <button class="lang-btn" onclick="toggleLang(event)">
+        <i class="fas fa-language"></i>
+        <span id="langLabel">EN — English</span>
+        <i class="fas fa-chevron-down lang-chevron"></i>
+      </button>
+      <div class="lang-menu">
+        <button class="lang-item active" data-l="en" onclick="setLang('en',this)"><span class="fl">🇬🇧</span>English<span class="nat">English</span></button>
+        <button class="lang-item" data-l="ta" onclick="setLang('ta',this)"><span class="fl">🇮🇳</span>Tamil<span class="nat">தமிழ்</span></button>
+        <button class="lang-item" data-l="hi" onclick="setLang('hi',this)"><span class="fl">🇮🇳</span>Hindi<span class="nat">हिन्दी</span></button>
+        <button class="lang-item" data-l="te" onclick="setLang('te',this)"><span class="fl">🇮🇳</span>Telugu<span class="nat">తెలుగు</span></button>
+        <button class="lang-item" data-l="kn" onclick="setLang('kn',this)"><span class="fl">🇮🇳</span>Kannada<span class="nat">ಕನ್ನಡ</span></button>
+        <button class="lang-item" data-l="ml" onclick="setLang('ml',this)"><span class="fl">🇮🇳</span>Malayalam<span class="nat">മലയാളം</span></button>
+        <button class="lang-item" data-l="bn" onclick="setLang('bn',this)"><span class="fl">🇮🇳</span>Bengali<span class="nat">বাংলা</span></button>
+        <button class="lang-item" data-l="mr" onclick="setLang('mr',this)"><span class="fl">🇮🇳</span>Marathi<span class="nat">मराठी</span></button>
+        <button class="lang-item" data-l="ms" onclick="setLang('ms',this)"><span class="fl">🇲🇾</span>Malay<span class="nat">Bahasa</span></button>
+        <button class="lang-item" data-l="fr" onclick="setLang('fr',this)"><span class="fl">🇫🇷</span>French<span class="nat">Français</span></button>
+        <button class="lang-item" data-l="de" onclick="setLang('de',this)"><span class="fl">🇩🇪</span>German<span class="nat">Deutsch</span></button>
+        <button class="lang-item" data-l="es" onclick="setLang('es',this)"><span class="fl">🇪🇸</span>Spanish<span class="nat">Español</span></button>
+        <button class="lang-item" data-l="ar" onclick="setLang('ar',this)"><span class="fl">🇸🇦</span>Arabic<span class="nat">العربية</span></button>
+      </div>
+    </div>
+    <a href="/patient/assess" class="btn-g"><i class="fas fa-rotate-right"></i><span class="hide-xs"> New</span></a>
+    <a href="/patient/reports" class="btn-g"><i class="fas fa-history"></i><span class="hide-xs"> History</span></a>
+    {% if report_id %}<a href="/patient/download-pdf/{{ report_id }}" class="btn-p"><i class="fas fa-file-pdf"></i><span class="hide-xs"> PDF</span></a>{% endif %}
+  </div>
+</header>
+
+<main class="pw pe">
+
+  <!-- ════ VOICE PLAYER ════ -->
+  <div class="vplayer">
+    <button class="vp-play" id="vpBtn" onclick="toggleVoice()"><i class="fas fa-play" id="vpIcon"></i></button>
+    <div class="vp-info">
+      <div class="vp-caption">AI Voice Summary &middot; <span id="vpLang">English</span></div>
+      <div class="vp-ttl">Cardiac Risk Analysis — {{ ref_id }}</div>
+      <div class="vp-wave" id="vpWave">
+        <div class="wbar" style="height:10px;"></div><div class="wbar" style="height:6px;"></div>
+        <div class="wbar" style="height:14px;"></div><div class="wbar" style="height:8px;"></div>
+        <div class="wbar" style="height:18px;"></div><div class="wbar" style="height:5px;"></div>
+        <div class="wbar" style="height:12px;"></div><div class="wbar" style="height:9px;"></div>
+        <div class="wbar" style="height:16px;"></div><div class="wbar" style="height:7px;"></div>
+        <div class="wbar" style="height:13px;"></div><div class="wbar" style="height:11px;"></div>
+      </div>
+    </div>
+    <div class="vp-prog">
+      <div class="vp-track"><div class="vp-fill" id="vpFill"></div></div>
+      <div class="vp-times"><span id="vpEl">0:00</span><span id="vpDur">—</span></div>
+    </div>
+    <div class="vp-acts">
+      <button class="vp-act" onclick="replayVoice()" title="Replay"><i class="fas fa-rotate-right"></i></button>
+      <button class="vp-act" onclick="stopVoice()" title="Stop"><i class="fas fa-stop"></i></button>
+    </div>
+  </div>
+
+  <!-- ════ RESULT HERO ════ -->
+  <div class="rhero sev-{{ severity }}">
+    <div class="rhero-glow"></div>
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;position:relative;">
+      <div class="score-ring">
+        <div class="score-num">{{ risk_score }}%</div>
+        <div class="score-sub" data-lk="lk_risk_lbl">risk score</div>
+      </div>
+      <div style="flex:1;min-width:150px;">
+        <div style="font-size:9px;letter-spacing:1.3px;text-transform:uppercase;color:rgba(255,255,255,.38);margin-bottom:5px;font-family:var(--mono);" data-lk="lk_assess_title">Cardiac Risk Assessment</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;flex-wrap:wrap;">
+          <i class="{% if severity=='Low' %}fas fa-shield-heart{% elif severity=='Moderate' %}fas fa-circle-exclamation{% elif severity=='High' %}fas fa-triangle-exclamation{% else %}fas fa-heart-crack{% endif %}" style="font-size:1.5rem;opacity:.9;"></i>
+          <span style="font-size:26px;font-weight:900;letter-spacing:-.3px;" data-lk="lk_sev_label">{{ severity }} Risk</span>
+        </div>
+        <p style="margin:0;color:rgba(255,255,255,.7);font-size:12.5px;line-height:1.7;max-width:500px;" data-lk="lk_explanation">{{ explanation }}</p>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:8px;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;font-family:var(--mono);" data-lk="lk_ref_lbl">Report ID</div>
+        <div class="mono" style="font-size:10px;color:rgba(255,255,255,.6);">{{ ref_id }}</div>
+      </div>
+    </div>
+    <div style="margin-top:18px;position:relative;">
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.3);margin-bottom:5px;font-family:var(--mono);"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+      <div style="background:rgba(255,255,255,.1);border-radius:8px;height:6px;overflow:hidden;"><div id="rBar" style="height:100%;width:0%;background:rgba(255,255,255,.65);border-radius:8px;transition:width 1.6s cubic-bezier(.4,0,.2,1);"></div></div>
+    </div>
+  </div>
+
+  <!-- ════ GAUGE + FEATURES ════ -->
+  <div class="row g-3 mb-3">
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="ch"><i class="fas fa-gauge-high" style="color:var(--blue);"></i> <span data-lk="lk_gauge">Risk Gauge</span></div>
+        <div class="cb" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:178px;">
+          <div style="position:relative;width:174px;height:90px;overflow:hidden;"><canvas id="gaugeCanvas" width="174" height="90"></canvas></div>
+          <div style="text-align:center;margin-top:10px;">
+            <div style="font-size:34px;font-weight:900;line-height:1;color:{{ color }};">{{ risk_score }}%</div>
+            <span class="rp rp-{{ severity }}" style="margin-top:7px;display:inline-flex;font-size:11px;"><span class="dot"></span><span data-lk="lk_sev_short">{{ severity }}</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card h-100">
+        <div class="ch"><i class="fas fa-brain" style="color:var(--blue);"></i> <span data-lk="lk_feat_title">AI Feature Importance</span> <span style="margin-left:auto;font-size:11px;font-weight:400;color:var(--muted);">Gradient Boosting</span></div>
+        <div class="cb" style="padding:12px 16px!important;"><canvas id="featBar" height="175"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ VITALS + RECS ════ -->
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="ch"><i class="fas fa-clipboard-check" style="color:var(--blue);"></i> <span data-lk="lk_vitals">Clinical Vitals</span></div>
+        <div class="cb p0">
+          <div class="vital"><div class="vital-n"><i class="fas fa-user" style="color:var(--muted);width:13px;"></i><span data-lk="lk_age">Age</span></div><div class="vital-v">{{ data.age }} yrs</div><div class="vtag vn">—</div></div>
+          <div class="vital"><div class="vital-n"><i class="fas fa-venus-mars" style="color:var(--muted);width:13px;"></i><span data-lk="lk_sex">Sex</span></div><div class="vital-v" data-lk="lk_gender">{{ 'Male' if data.gender==1 else 'Female' }}</div><div class="vtag vn">—</div></div>
+          <div class="vital"><div class="vital-n"><i class="fas fa-gauge-high" style="color:var(--red);width:13px;"></i><span data-lk="lk_bp">Blood Pressure</span></div><div class="vital-v">{{ data.bp }} mmHg</div><div class="vtag {% if data.bp>140 %}vr{% elif data.bp>120 %}vw{% else %}vn{% endif %}"><span data-lk="lk_bp_s">{% if data.bp>140 %}Elevated{% elif data.bp>120 %}Pre-High{% else %}Normal{% endif %}</span></div></div>
+          <div class="vital"><div class="vital-n"><i class="fas fa-droplet" style="color:var(--yellow);width:13px;"></i><span data-lk="lk_chol">Cholesterol</span></div><div class="vital-v">{{ data.cholesterol }} mg/dL</div><div class="vtag {% if data.cholesterol>=240 %}vr{% elif data.cholesterol>=200 %}vw{% else %}vn{% endif %}"><span data-lk="lk_chol_s">{% if data.cholesterol>=240 %}High{% elif data.cholesterol>=200 %}Borderline{% else %}Normal{% endif %}</span></div></div>
+          <div class="vital"><div class="vital-n"><i class="fas fa-heart-pulse" style="color:var(--red);width:13px;"></i><span data-lk="lk_hr">Heart Rate</span></div><div class="vital-v">{{ data.heart_rate }} bpm</div><div class="vtag {% if data.heart_rate>100 or data.heart_rate<60 %}vw{% else %}vn{% endif %}"><span data-lk="lk_hr_s">{% if data.heart_rate>100 %}Tachy{% elif data.heart_rate<60 %}Brady{% else %}Normal{% endif %}</span></div></div>
+          <div class="vital"><div class="vital-n"><i class="fas fa-vial" style="color:var(--yellow);width:13px;"></i><span data-lk="lk_sugar">Blood Sugar</span></div><div class="vital-v" data-lk="lk_sugar_v">{{ 'Elevated' if data.sugar==1 else 'Normal' }}</div><div class="vtag {% if data.sugar==1 %}vr{% else %}vn{% endif %}"><span data-lk="lk_sugar_s">{% if data.sugar==1 %}High{% else %}Normal{% endif %}</span></div></div>
+          <div class="vital"><div class="vital-n"><i class="fas fa-lungs" style="color:var(--orange);width:13px;"></i><span data-lk="lk_chest">Chest Pain</span></div><div class="vital-v" style="font-size:12px;" data-lk="lk_chest_v">{% if data.chest_pain==0 %}Typical Angina{% elif data.chest_pain==1 %}Atypical Angina{% elif data.chest_pain==2 %}Non-Anginal{% else %}Asymptomatic{% endif %}</div><div class="vtag {% if data.chest_pain==0 %}vr{% elif data.chest_pain==1 or data.chest_pain==2 %}vw{% else %}vn{% endif %}"><span data-lk="lk_chest_s">{% if data.chest_pain==0 %}High{% elif data.chest_pain==1 or data.chest_pain==2 %}Moderate{% else %}Low{% endif %}</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card h-100" style="border-top:3px solid {{ color }}!important;">
+        <div class="ch"><i class="fas fa-list-check" style="color:var(--blue);"></i> <span data-lk="lk_recs">Recommended Actions</span> <span class="rp rp-{{ severity }}" style="margin-left:auto;font-size:10.5px;"><span class="dot"></span>{{ severity }}</span></div>
+        <div class="cb" id="recsBox">
+          {% if severity=='Critical' %}
+          <div style="background:var(--rbg);border-radius:9px;padding:12px 14px;margin-bottom:12px;border-left:4px solid var(--red);">
+            <div style="font-weight:700;color:#7f1d1d;font-size:13px;margin-bottom:3px;"><i class="fas fa-radiation me-2"></i><span data-lk="lk_emerg_t">Emergency Action Required</span></div>
+            <p style="font-size:12px;color:#991b1b;margin:0;line-height:1.6;" data-lk="lk_emerg_b">Seek emergency cardiac care immediately. Call 112/911 if you feel chest pain, shortness of breath, or palpitations.</p>
+          </div>
+          {% endif %}
+
+          {# ─── English recommendation texts for each severity ─── #}
+          {% if severity=='Low' %}
+            {% set rec_data = [
+              ('fa-dumbbell','var(--green)','var(--gbg)','lk_r1','150+ min/week moderate aerobic exercise'),
+              ('fa-utensils','var(--green)','var(--gbg)','lk_r2','DASH or Mediterranean dietary pattern'),
+              ('fa-calendar-check','var(--blue)','#dbeafe','lk_r3','Annual BP and cholesterol screenings'),
+              ('fa-ban-smoking','var(--orange)','var(--obg)','lk_r4','Avoid tobacco and limit alcohol intake'),
+              ('fa-weight-scale','var(--blue)','#dbeafe','lk_r5','Maintain healthy BMI between 18.5–24.9')
+            ] %}
+          {% elif severity=='Moderate' %}
+            {% set rec_data = [
+              ('fa-user-doctor','var(--yellow)','var(--ybg)','lk_r1','Physician consultation within 2–4 weeks'),
+              ('fa-salt-shaker','var(--yellow)','var(--ybg)','lk_r2','Reduce sodium to under 2,300 mg/day'),
+              ('fa-heart-pulse','var(--red)','var(--rbg)','lk_r3','Monitor blood pressure at home weekly'),
+              ('fa-person-walking','var(--green)','var(--gbg)','lk_r4','Start a supervised exercise programme'),
+              ('fa-pills','var(--blue)','#dbeafe','lk_r5','Discuss statin therapy with your doctor')
+            ] %}
+          {% elif severity=='High' %}
+            {% set rec_data = [
+              ('fa-hospital','var(--red)','var(--rbg)','lk_r1','Cardiology consultation within 1 week'),
+              ('fa-heart-pulse','var(--red)','var(--rbg)','lk_r2','Request 12-lead ECG and stress test'),
+              ('fa-person-circle-xmark','var(--orange)','var(--obg)','lk_r3','Avoid strenuous unsupervised exercise'),
+              ('fa-pills','var(--blue)','#dbeafe','lk_r4','Review and optimise current medications'),
+              ('fa-gauge-high','var(--red)','var(--rbg)','lk_r5','Continuous blood pressure monitoring')
+            ] %}
+          {% else %}
+            {% set rec_data = [
+              ('fa-ambulance','var(--red)','var(--rbg)','lk_r1','Immediate emergency cardiology visit'),
+              ('fa-hospital','var(--red)','var(--rbg)','lk_r2','ECG, troponin levels, cardiac imaging'),
+              ('fa-phone-volume','var(--red)','var(--rbg)','lk_r3','Notify a family member or caregiver now'),
+              ('fa-car-side','var(--orange)','var(--obg)','lk_r4','Do not drive — call emergency services')
+            ] %}
+          {% endif %}
+          {% for icon, ic, bg, lk, text in rec_data %}
+          <div class="rec"><div class="rec-ic" style="background:{{ bg }};color:{{ ic }};"><i class="fas {{ icon }}"></i></div><span data-lk="{{ lk }}">{{ text }}</span></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding-bottom:10px;">
+    <a href="/patient/assess" class="bo"><i class="fas fa-rotate-right"></i> <span data-lk="lk_btn_new">New Assessment</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/patient/reports" class="bo"><i class="fas fa-history"></i> <span data-lk="lk_btn_hist">All Reports</span></a>
+      <a href="/patient/dashboard" class="bp"><i class="fas fa-house"></i> <span data-lk="lk_btn_dash">Dashboard</span></a>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ─── Server values ─── */
+var SEV='{{ severity }}', SCORE='{{ risk_score }}', REF='{{ ref_id }}';
+var BP={{ data.bp }}, CHOL={{ data.cholesterol }}, HR={{ data.heart_rate }};
+var SUGAR='{{ data.sugar }}', CHEST='{{ data.chest_pain }}', GEN='{{ data.gender }}';
+
+/* ─── Animate risk bar ─── */
+setTimeout(function(){document.getElementById('rBar').style.width='{{ risk_score }}%';},350);
+
+/* ─── Gauge (half-doughnut) ─── */
+new Chart(document.getElementById('gaugeCanvas'),{
+  type:'doughnut',
+  data:{datasets:[{data:[{{ risk_score }},{{ 100-risk_score }}],
+    backgroundColor:['{{ color }}','#e4ecf4'],borderWidth:0,
+    circumference:180,rotation:-90}]},
+  options:{cutout:'74%',plugins:{legend:{display:false},tooltip:{enabled:false}},
+    animation:{duration:1400,easing:'easeOutQuart'}}
+});
+
+/* ─── Feature bar ─── */
+(function(){
+  var feats={{ features|tojson }}, imps={{ importance|tojson }};
+  var idx=imps.map(function(_,i){return i;}).sort(function(a,b){return imps[b]-imps[a];});
+  var sf=idx.map(function(i){return feats[i];}), sv=idx.map(function(i){return (imps[i]*100).toFixed(1);});
+  var bc=sv.map(function(v){return parseFloat(v)>22?'#1d6fa4':parseFloat(v)>14?'#2281df':'#7db9da';});
+  new Chart(document.getElementById('featBar'),{
+    type:'bar',
+    data:{labels:sf,datasets:[{data:sv,backgroundColor:bc,borderRadius:5,borderSkipped:false}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'#f0f4f8'},ticks:{callback:function(v){return v+'%';},font:{size:10.5}},beginAtZero:true},
+              y:{grid:{display:false},ticks:{font:{size:11,weight:'600'},color:'#2d3f55'}}},
+      animation:{duration:1100}}
+  });
+})();
+
+/* ══════════════════════════════════════
+   LANGUAGE DATA
+══════════════════════════════════════ */
+var SEV_MAP={
+  Low:{ta:'குறைந்த அபாயம்',hi:'कम जोखिम',te:'తక్కువ ప్రమాదం',kn:'ಕಡಿಮೆ ಅಪಾಯ',ml:'കുറഞ്ഞ അപകടം',bn:'কম ঝুঁকি',mr:'कमी जोखीम',ms:'Risiko Rendah',fr:'Risque faible',de:'Geringes Risiko',es:'Riesgo bajo',ar:'خطر منخفض'},
+  Moderate:{ta:'மிதமான அபாயம்',hi:'मध्यम जोखिम',te:'మధ్యస్థ ప్రమాదం',kn:'ಮಧ್ಯಮ ಅಪಾಯ',ml:'മിതമായ അപകടം',bn:'মাঝারি ঝুঁকি',mr:'मध्यम जोखीम',ms:'Risiko Sederhana',fr:'Risque modéré',de:'Mittleres Risiko',es:'Riesgo moderado',ar:'خطر متوسط'},
+  High:{ta:'அதிக அபாயம்',hi:'उच्च जोखिम',te:'అధిక ప్రమాదం',kn:'ಹೆಚ್ಚು ಅಪಾಯ',ml:'ഉയർന്ന അപകടം',bn:'উচ্চ ঝুঁকি',mr:'उच्च जोखीम',ms:'Risiko Tinggi',fr:'Risque élevé',de:'Hohes Risiko',es:'Riesgo alto',ar:'خطر عالٍ'},
+  Critical:{ta:'மிக அதிக அபாயம்',hi:'गंभीर जोखिम',te:'విపత్తు ప్రమాదం',kn:'ನಿರ್ಣಾಯಕ ಅಪಾಯ',ml:'ഗുരുതരമായ അപകടം',bn:'সংকটজনক ঝুঁকি',mr:'गंभीर जोखीम',ms:'Risiko Kritikal',fr:'Risque critique',de:'Kritisches Risiko',es:'Riesgo crítico',ar:'خطر حرج'}
+};
+var T={
+en:{label:'EN — English',lc:'en-US',name:'English',dir:'ltr',
+  lk_risk_lbl:'risk score',lk_assess_title:'Cardiac Risk Assessment',
+  lk_sev_label:SEV+' Risk',lk_sev_short:SEV,
+  lk_explanation:'{{ explanation|replace("'","\\'")|replace("\n"," ") }}',
+  lk_ref_lbl:'Report ID',lk_gauge:'Risk Gauge',lk_feat_title:'AI Feature Importance',
+  lk_vitals:'Clinical Vitals',lk_recs:'Recommended Actions',
+  lk_age:'Age',lk_sex:'Sex',lk_bp:'Blood Pressure',lk_chol:'Cholesterol',
+  lk_hr:'Heart Rate',lk_sugar:'Blood Sugar',lk_chest:'Chest Pain',
+  lk_gender:GEN=='1'?'Male':'Female',
+  lk_bp_s:BP>140?'Elevated':BP>120?'Pre-High':'Normal',
+  lk_chol_s:CHOL>=240?'High':CHOL>=200?'Borderline':'Normal',
+  lk_hr_s:HR>100?'Tachy':HR<60?'Brady':'Normal',
+  lk_sugar_v:SUGAR=='1'?'Elevated':'Normal',lk_sugar_s:SUGAR=='1'?'High':'Normal',
+  lk_chest_v:CHEST=='0'?'Typical Angina':CHEST=='1'?'Atypical Angina':CHEST=='2'?'Non-Anginal':'Asymptomatic',
+  lk_chest_s:CHEST=='0'?'High':CHEST=='1'||CHEST=='2'?'Moderate':'Low',
+  lk_emerg_t:'Emergency Action Required',
+  lk_emerg_b:'Seek emergency cardiac care immediately. Call 112/911 if you feel chest pain, shortness of breath, or palpitations.',
+  lk_btn_new:'New Assessment',lk_btn_hist:'All Reports',lk_btn_dash:'Dashboard',
+  lk_r1:{Low:'150+ min/week moderate aerobic exercise',Moderate:'Physician consultation within 2–4 weeks',High:'Cardiology consultation within 1 week',Critical:'Immediate emergency cardiology visit'},
+  lk_r2:{Low:'DASH or Mediterranean dietary pattern',Moderate:'Reduce sodium to under 2,300 mg/day',High:'Request 12-lead ECG and stress test',Critical:'ECG, troponin levels, cardiac imaging'},
+  lk_r3:{Low:'Annual BP and cholesterol screenings',Moderate:'Monitor blood pressure at home weekly',High:'Avoid strenuous unsupervised exercise',Critical:'Notify a family member or caregiver now'},
+  lk_r4:{Low:'Avoid tobacco and limit alcohol intake',Moderate:'Start a supervised exercise programme',High:'Review and optimise current medications',Critical:'Do not drive — call emergency services'},
+  lk_r5:{Low:'Maintain healthy BMI between 18.5–24.9',Moderate:'Discuss statin therapy with your doctor',High:'Continuous blood pressure monitoring',Critical:''},
+  vi:function(){return 'Your SmartHeart cardiac risk score is '+SCORE+' percent, '+SEV+' risk. '+(BP>140?'Your blood pressure of '+BP+' millimeters is elevated. ':'')+({Low:'Your heart health looks good. Continue regular exercise and annual checkups.',Moderate:'Some risk factors need attention. Please see your doctor within 2 to 4 weeks.',High:'High cardiac risk detected. Consult a cardiologist within one week and avoid strenuous exercise.',Critical:'Critical risk. Seek emergency cardiac care immediately. Call emergency services if you feel chest pain.'})[SEV];}
+},
+ta:{label:'தமிழ்',lc:'ta-IN',name:'Tamil',dir:'ltr',
+  lk_risk_lbl:'அபாய மதிப்பு',lk_assess_title:'இதய அபாய மதிப்பீடு',
+  lk_sev_label:(SEV_MAP[SEV]||{ta:SEV+' Risk'}).ta,lk_sev_short:({Low:'குறைந்த',Moderate:'மிதமான',High:'அதிக',Critical:'மிக அதிக'})[SEV],
+  lk_explanation:({Low:'உங்கள் இதய ஆரோக்கியம் சாதாரண நிலையில் உள்ளது.',Moderate:'சில அபாய காரணிகள் உள்ளன — கவனம் தேவை.',High:'இதய அபாயம் அதிகமாக உள்ளது. உடனடியாக மருத்துவரை நாடுங்கள்.',Critical:'மிக அதிக அபாயம் — உடனடியாக அவசர சிகிச்சை தேவை.'})[SEV],
+  lk_ref_lbl:'அறிக்கை ID',lk_gauge:'அபாய அளவுகோல்',lk_feat_title:'AI அம்ச முக்கியத்துவம்',lk_vitals:'மருத்துவ அறிகுறிகள்',lk_recs:'பரிந்துரைகள்',
+  lk_age:'வயது',lk_sex:'பாலினம்',lk_bp:'இரத்த அழுத்தம்',lk_chol:'கொழுப்பு',lk_hr:'இதய துடிப்பு',lk_sugar:'இரத்த சர்க்கரை',lk_chest:'மார்பு வலி',
+  lk_gender:GEN=='1'?'ஆண்':'பெண்',lk_bp_s:BP>140?'அதிகம்':BP>120?'சற்று அதிகம்':'சாதாரணம்',
+  lk_chol_s:CHOL>=240?'அதிகம்':CHOL>=200?'எல்லை':'சாதாரணம்',lk_hr_s:HR>100?'வேகம்':HR<60?'மெதுவு':'சாதாரணம்',
+  lk_sugar_v:SUGAR=='1'?'அதிகம்':'சாதாரணம்',lk_sugar_s:SUGAR=='1'?'அதிகம்':'சாதாரணம்',
+  lk_chest_v:({0:'வழக்கமான நெஞ்சு வலி',1:'வழக்கத்திற்கு மாறான வலி',2:'வலி அல்லாதது',3:'அறிகுறியற்றது'})[CHEST],
+  lk_chest_s:CHEST=='0'?'அதிகம்':CHEST=='1'||CHEST=='2'?'மிதமான':'குறைவு',
+  lk_emerg_t:'அவசர நடவடிக்கை தேவை',lk_emerg_b:'உடனடியாக அவசர இதய சிகிச்சையை நாடுங்கள். மார்பு வலி இருந்தால் 112 அழைக்கவும்.',
+  lk_btn_new:'புதிய மதிப்பீடு',lk_btn_hist:'அனைத்து அறிக்கைகள்',lk_btn_dash:'டாஷ்போர்டு',
+  lk_r1:{Low:'வாரம் 150+ நிமிடம் உடற்பயிற்சி',Moderate:'2–4 வாரங்களில் மருத்துவரை சந்தியுங்கள்',High:'1 வாரத்தில் இதய நிபுணரை சந்தியுங்கள்',Critical:'உடனடி அவசர இதய மதிப்பீடு'},
+  lk_r2:{Low:'DASH அல்லது மத்திய தரைக்கடல் உணவு',Moderate:'உப்பை 2,300 mg க்கும் குறைவாக வையுங்கள்',High:'12-லீட் ECG மற்றும் மன அழுத்த சோதனை',Critical:'ECG, ட்ரோபோனின் அளவுகள், இதய படிம'},
+  lk_r3:{Low:'வருடாந்திர BP மற்றும் கொழுப்பு சோதனை',Moderate:'வாரம் BP கண்காணியுங்கள்',High:'தீவிர உடற்பயிற்சியை தவிருங்கள்',Critical:'குடும்பத்தினரிடம் தெரியப்படுத்துங்கள்'},
+  lk_r4:{Low:'புகையிலை மற்றும் மது தவிருங்கள்',Moderate:'கண்காணிக்கப்பட்ட உடற்பயிற்சி திட்டம்',High:'தற்போதைய மருந்துகளை மதிப்பீடு செய்யுங்கள்',Critical:'வாகனம் ஓட்டாதீர்கள் — 108 அழைக்கவும்'},
+  lk_r5:{Low:'BMI 18.5–24.9 இடையில் பராமரியுங்கள்',Moderate:'ஸ்டேடின் சிகிச்சையை பரிசீலியுங்கள்',High:'தொடர்ந்து BP கண்காணிப்பு',Critical:''},
+  vi:function(){return 'வணக்கம். உங்கள் இதய அபாய மதிப்பெண் '+SCORE+' சதவீதம். '+(SEV_MAP[SEV]||{ta:SEV}).ta+'. '+({Low:'இதய ஆரோக்கியம் நல்லது. வழக்கமான உடற்பயிற்சி தொடருங்கள்.',Moderate:'சில அபாய காரணிகள் உள்ளன. மருத்துவரை சந்தியுங்கள்.',High:'அதிக அபாயம். இதய நிபுணரை ஒரு வாரத்தில் சந்தியுங்கள்.',Critical:'மிக அதிக அபாயம். உடனடியாக அவசர சேவையை நாடுங்கள்.'})[SEV];}
+},
+hi:{label:'हिंदी',lc:'hi-IN',name:'Hindi',dir:'ltr',
+  lk_risk_lbl:'जोखिम स्कोर',lk_assess_title:'हृदय जोखिम मूल्यांकन',
+  lk_sev_label:(SEV_MAP[SEV]||{hi:SEV+' Risk'}).hi,lk_sev_short:({Low:'कम',Moderate:'मध्यम',High:'उच्च',Critical:'गंभीर'})[SEV],
+  lk_explanation:({Low:'आपका हृदय स्वास्थ्य सामान्य सीमा में है।',Moderate:'कुछ जोखिम कारक मौजूद हैं जिन पर ध्यान देना चाहिए।',High:'हृदय जोखिम उच्च है। कृपया तुरंत डॉक्टर से मिलें।',Critical:'गंभीर जोखिम — तुरंत आपातकालीन चिकित्सा सेवा लें।'})[SEV],
+  lk_ref_lbl:'रिपोर्ट ID',lk_gauge:'जोखिम गेज',lk_feat_title:'AI विशेषता महत्व',lk_vitals:'नैदानिक संकेत',lk_recs:'अनुशंसित कार्रवाई',
+  lk_age:'आयु',lk_sex:'लिंग',lk_bp:'रक्तचाप',lk_chol:'कोलेस्ट्रॉल',lk_hr:'हृदय गति',lk_sugar:'रक्त शर्करा',lk_chest:'सीने का दर्द',
+  lk_gender:GEN=='1'?'पुरुष':'महिला',lk_bp_s:BP>140?'उच्च':BP>120?'थोड़ा उच्च':'सामान्य',
+  lk_chol_s:CHOL>=240?'उच्च':CHOL>=200?'सीमारेखा':'सामान्य',lk_hr_s:HR>100?'तेज':HR<60?'धीमा':'सामान्य',
+  lk_sugar_v:SUGAR=='1'?'उच्च':'सामान्य',lk_sugar_s:SUGAR=='1'?'उच्च':'सामान्य',
+  lk_chest_v:({0:'सामान्य एनजाइना',1:'असामान्य एनजाइना',2:'गैर-एंजाइनल',3:'लक्षण-रहित'})[CHEST],
+  lk_chest_s:CHEST=='0'?'उच्च':CHEST=='1'||CHEST=='2'?'मध्यम':'कम',
+  lk_emerg_t:'आपातकालीन कार्रवाई आवश्यक',lk_emerg_b:'तुरंत आपातकालीन हृदय देखभाल लें। सीने में दर्द पर 112 पर कॉल करें।',
+  lk_btn_new:'नया मूल्यांकन',lk_btn_hist:'सभी रिपोर्ट',lk_btn_dash:'डैशबोर्ड',
+  lk_r1:{Low:'प्रति सप्ताह 150+ मिनट व्यायाम',Moderate:'2–4 सप्ताह में डॉक्टर से परामर्श',High:'1 सप्ताह में हृदय विशेषज्ञ',Critical:'तुरंत आपातकालीन हृदय मूल्यांकन'},
+  lk_r2:{Low:'DASH या भूमध्यसागरीय आहार',Moderate:'सोडियम 2,300 मिग्रा से कम करें',High:'12-लीड ECG और स्ट्रेस टेस्ट',Critical:'ECG, ट्रोपोनिन, हृदय इमेजिंग'},
+  lk_r3:{Low:'वार्षिक BP और कोलेस्ट्रॉल जांच',Moderate:'घर पर साप्ताहिक BP मॉनिटर करें',High:'कठिन व्यायाम से बचें',Critical:'परिवार के सदस्य को सूचित करें'},
+  lk_r4:{Low:'तंबाकू और शराब से बचें',Moderate:'पर्यवेक्षित व्यायाम शुरू करें',High:'वर्तमान दवाओं की समीक्षा करें',Critical:'वाहन न चलाएं — 112 बुलाएं'},
+  lk_r5:{Low:'स्वस्थ BMI 18.5–24.9 बनाए रखें',Moderate:'स्टैटिन थेरेपी पर विचार करें',High:'निरंतर BP मॉनिटरिंग',Critical:''},
+  vi:function(){return 'नमस्ते। आपका हृदय जोखिम स्कोर '+SCORE+' प्रतिशत है — '+(SEV_MAP[SEV]||{hi:SEV}).hi+'. '+({Low:'आपकी हृदय सेहत अच्छी है। नियमित व्यायाम जारी रखें।',Moderate:'कुछ जोखिम कारक हैं। कृपया डॉक्टर से मिलें।',High:'उच्च जोखिम। हृदय विशेषज्ञ से मिलें।',Critical:'गंभीर जोखिम। तुरंत आपातकालीन हृदय देखभाल लें।'})[SEV];}
+},
+ms:{label:'BM — Malay',lc:'ms-MY',name:'Malay',dir:'ltr',
+  lk_risk_lbl:'skor risiko',lk_assess_title:'Penilaian Risiko Jantung',
+  lk_sev_label:(SEV_MAP[SEV]||{ms:SEV+' Risk'}).ms,lk_sev_short:({Low:'Rendah',Moderate:'Sederhana',High:'Tinggi',Critical:'Kritikal'})[SEV],
+  lk_explanation:({Low:'Kesihatan jantung anda dalam had normal.',Moderate:'Beberapa faktor risiko memerlukan perhatian.',High:'Risiko jantung anda tinggi. Sila berjumpa doktor segera.',Critical:'Risiko kritikal — dapatkan rawatan kecemasan segera.'})[SEV],
+  lk_ref_lbl:'ID Laporan',lk_gauge:'Tolok Risiko',lk_feat_title:'Kepentingan Ciri AI',lk_vitals:'Tanda-tanda Klinikal',lk_recs:'Tindakan Disyorkan',
+  lk_age:'Umur',lk_sex:'Jantina',lk_bp:'Tekanan Darah',lk_chol:'Kolesterol',lk_hr:'Kadar Nadi',lk_sugar:'Gula Darah',lk_chest:'Sakit Dada',
+  lk_gender:GEN=='1'?'Lelaki':'Perempuan',lk_bp_s:BP>140?'Tinggi':BP>120?'Sedikit Tinggi':'Normal',
+  lk_chol_s:CHOL>=240?'Tinggi':CHOL>=200?'Sempadan':'Normal',lk_hr_s:HR>100?'Cepat':HR<60?'Perlahan':'Normal',
+  lk_sugar_v:SUGAR=='1'?'Tinggi':'Normal',lk_sugar_s:SUGAR=='1'?'Tinggi':'Normal',
+  lk_chest_v:({0:'Angina Tipikal',1:'Angina Atipikal',2:'Bukan Angina',3:'Tanpa Gejala'})[CHEST],
+  lk_chest_s:CHEST=='0'?'Tinggi':CHEST=='1'||CHEST=='2'?'Sederhana':'Rendah',
+  lk_emerg_t:'Tindakan Kecemasan Diperlukan',lk_emerg_b:'Dapatkan rawatan jantung kecemasan segera. Hubungi 999 jika mengalami sakit dada.',
+  lk_btn_new:'Penilaian Baru',lk_btn_hist:'Semua Laporan',lk_btn_dash:'Papan Pemuka',
+  lk_r1:{Low:'150+ min/minggu senaman aerobik',Moderate:'Konsultasi doktor dalam 2–4 minggu',High:'Kardiologi dalam 1 minggu',Critical:'Penilaian kecemasan jantung segera'},
+  lk_r2:{Low:'Diet DASH atau Mediterranean',Moderate:'Kurangkan natrium di bawah 2,300 mg',High:'ECG 12-lead dan ujian tekanan',Critical:'ECG, troponin, pengimejan jantung'},
+  lk_r3:{Low:'Saringan BP dan kolesterol tahunan',Moderate:'Pantau BP di rumah setiap minggu',High:'Elakkan senaman berat',Critical:'Maklumkan ahli keluarga'},
+  lk_r4:{Low:'Elakkan tembakau, hadkan alkohol',Moderate:'Program senaman bersupervisi',High:'Semak dan optimumkan ubatan',Critical:'Jangan memandu — hubungi 999'},
+  lk_r5:{Low:'Kekalkan BMI antara 18.5–24.9',Moderate:'Pertimbangkan terapi statin',High:'Pemantauan BP berterusan',Critical:''},
+  vi:function(){return 'Skor risiko jantung SmartHeart anda ialah '+SCORE+' peratus, '+(SEV_MAP[SEV]||{ms:SEV}).ms+'. '+({Low:'Kesihatan jantung anda baik. Teruskan senaman dan pemeriksaan tahunan.',Moderate:'Ada faktor risiko. Sila berjumpa doktor dalam 2 hingga 4 minggu.',High:'Risiko tinggi. Berjumpa pakar jantung minggu ini.',Critical:'Kritikal. Dapatkan rawatan kecemasan segera.'})[SEV];}
+},
+te:{label:'తెలుగు',lc:'te-IN',name:'Telugu',dir:'ltr',
+  lk_risk_lbl:'రిస్క్ స్కోర్',lk_assess_title:'కార్డియాక్ రిస్క్ అసెస్‌మెంట్',
+  lk_sev_label:({Low:'తక్కువ ప్రమాదం',Moderate:'మధ్యస్థ ప్రమాదం',High:'అధిక ప్రమాదం',Critical:'విపత్తు ప్రమాదం'})[SEV],
+  lk_sev_short:({Low:'తక్కువ',Moderate:'మధ్యస్థ',High:'అధిక',Critical:'విపత్తు'})[SEV],
+  lk_explanation:({Low:'మీ గుండె ఆరోగ్యం సాధారణ పరిమితుల్లో ఉంది.',Moderate:'కొన్ని రిస్క్ కారణాలు శ్రద్ధ అవసరం.',High:'గుండె ప్రమాదం ఎక్కువగా ఉంది. వెంటనే డాక్టర్‌ను సంప్రదించండి.',Critical:'విపత్తు ప్రమాదం — వెంటనే అత్యవసర వైద్య సేవలు పొందండి.'})[SEV],
+  lk_ref_lbl:'రిపోర్ట్ ID',lk_gauge:'రిస్క్ గేజ్',lk_feat_title:'AI ఫీచర్ ప్రాముఖ్యత',lk_vitals:'క్లినికల్ వైటల్స్',lk_recs:'సిఫార్సు చేసిన చర్యలు',
+  lk_age:'వయసు',lk_sex:'లింగం',lk_bp:'రక్తపోటు',lk_chol:'కొలెస్ట్రాల్',lk_hr:'హృదయ స్పందన రేటు',lk_sugar:'రక్త చక్కెర',lk_chest:'ఛాతీ నొప్పి',
+  lk_gender:GEN=='1'?'పురుషుడు':'స్త్రీ',lk_bp_s:BP>140?'అధికం':BP>120?'కొంచెం అధికం':'సాధారణం',
+  lk_chol_s:CHOL>=240?'అధికం':CHOL>=200?'సరిహద్దు':'సాధారణం',lk_hr_s:HR>100?'వేగం':HR<60?'నెమ్మది':'సాధారణం',
+  lk_sugar_v:SUGAR=='1'?'అధికం':'సాధారణం',lk_sugar_s:SUGAR=='1'?'అధికం':'సాధారణం',
+  lk_chest_v:({0:'సాధారణ ఆంజినా',1:'అసాధారణ ఆంజినా',2:'నాన్-ఆంజినల్',3:'లక్షణాలు లేవు'})[CHEST],
+  lk_chest_s:CHEST=='0'?'అధికం':CHEST=='1'||CHEST=='2'?'మధ్యస్థ':'తక్కువ',
+  lk_emerg_t:'అత్యవసర చర్య అవసరం',lk_emerg_b:'వెంటనే అత్యవసర కార్డియాక్ సంరక్షణ పొందండి. ఛాతీ నొప్పి వస్తే 112కి కాల్ చేయండి.',
+  lk_btn_new:'కొత్త అసెస్‌మెంట్',lk_btn_hist:'అన్ని నివేదికలు',lk_btn_dash:'డాష్‌బోర్డ్',
+  lk_r1:{Low:'వారంలో 150+ నిమిషాల వ్యాయామం',Moderate:'2-4 వారాల్లో డాక్టర్ సంప్రదించండి',High:'1 వారంలో కార్డియాలజిస్ట్',Critical:'వెంటనే అత్యవసర కార్డియాక్ మూల్యాంకనం'},
+  lk_r2:{Low:'DASH లేదా భూమధ్యసముద్ర ఆహారం',Moderate:'సోడియం 2,300 mg కంటే తక్కువగా తీసుకోండి',High:'12-లీడ్ ECG మరియు స్ట్రెస్ టెస్ట్',Critical:'ECG, ట్రోపోనిన్, కార్డియాక్ ఇమేజింగ్'},
+  lk_r3:{Low:'వార్షిక BP మరియు కొలెస్ట్రాల్ స్క్రీనింగ్',Moderate:'వారంతో BP పర్యవేక్షణ',High:'కఠినమైన వ్యాయామం మానండి',Critical:'కుటుంబ సభ్యుణ్ణి తెలియజేయండి'},
+  lk_r4:{Low:'పొగాకు మానండి, మద్యం తగ్గించండి',Moderate:'పర్యవేక్షిత వ్యాయామ కార్యక్రమం',High:'ప్రస్తుత మందులను సమీక్షించండి',Critical:'వాహనం నడపకండి — అత్యవసర సేవలకు కాల్ చేయండి'},
+  lk_r5:{Low:'BMI 18.5-24.9 మధ్య ఉంచుకోండి',Moderate:'స్టాటిన్ థెరపీ గురించి చర్చించండి',High:'నిరంతర BP పర్యవేక్షణ',Critical:''},
+  vi:function(){return 'మీ SmartHeart కార్డియాక్ రిస్క్ స్కోర్ '+SCORE+' శాతం, '+({Low:'తక్కువ ప్రమాదం',Moderate:'మధ్యస్థ ప్రమాదం',High:'అధిక ప్రమాదం',Critical:'విపత్తు ప్రమాదం'})[SEV]+'. '+({Low:'మీ గుండె ఆరోగ్యం మంచిగా ఉంది.',Moderate:'కొన్ని రిస్క్ కారణాలు ఉన్నాయి. డాక్టర్‌ను సంప్రదించండి.',High:'అధిక ప్రమాదం. కార్డియాలజిస్ట్‌ను సంప్రదించండి.',Critical:'విపత్తు ప్రమాదం. వెంటనే అత్యవసర సేవలు పొందండి.'})[SEV];}
+},
+kn:{label:'ಕನ್ನಡ',lc:'kn-IN',name:'Kannada',dir:'ltr',
+  lk_risk_lbl:'ಅಪಾಯ ಸ್ಕೋರ್',lk_assess_title:'ಹೃದಯ ಅಪಾಯ ಮೌಲ್ಯಮಾಪನ',
+  lk_sev_label:({Low:'ಕಡಿಮೆ ಅಪಾಯ',Moderate:'ಮಧ್ಯಮ ಅಪಾಯ',High:'ಹೆಚ್ಚು ಅಪಾಯ',Critical:'ನಿರ್ಣಾಯಕ ಅಪಾಯ'})[SEV],
+  lk_sev_short:({Low:'ಕಡಿಮೆ',Moderate:'ಮಧ್ಯಮ',High:'ಹೆಚ್ಚು',Critical:'ನಿರ್ಣಾಯಕ'})[SEV],
+  lk_explanation:({Low:'ನಿಮ್ಮ ಹೃದಯ ಆರೋಗ್ಯ ಸಾಮಾನ್ಯ ಮಿತಿಯಲ್ಲಿದೆ.',Moderate:'ಕೆಲವು ಅಪಾಯ ಅಂಶಗಳು ಗಮನ ಅಗತ್ಯ.',High:'ಹೃದಯ ಅಪಾಯ ಹೆಚ್ಚಾಗಿದೆ. ತಕ್ಷಣ ವೈದ್ಯರನ್ನು ಸಂಪರ್ಕಿಸಿ.',Critical:'ನಿರ್ಣಾಯಕ ಅಪಾಯ — ತಕ್ಷಣ ತುರ್ತು ವೈದ್ಯ ಸೇವೆ ಪಡೆಯಿರಿ.'})[SEV],
+  lk_ref_lbl:'ವರದಿ ID',lk_gauge:'ಅಪಾಯ ಮಾಪಕ',lk_feat_title:'AI ಲಕ್ಷಣ ಪ್ರಾಮುಖ್ಯತೆ',lk_vitals:'ಕ್ಲಿನಿಕಲ್ ವೈಟಲ್ಸ್',lk_recs:'ಶಿಫಾರಸ್ ಮಾಡಿದ ಕ್ರಮಗಳು',
+  lk_age:'ವಯಸ್ಸು',lk_sex:'ಲಿಂಗ',lk_bp:'ರಕ್ತದೊತ್ತಡ',lk_chol:'ಕೊಲೆಸ್ಟರಾಲ್',lk_hr:'ಹೃದಯ ಬಡಿತ',lk_sugar:'ರಕ್ತ ಸಕ್ಕರೆ',lk_chest:'ಎದೆ ನೋವು',
+  lk_gender:GEN=='1'?'ಪುರುಷ':'ಮಹಿಳೆ',lk_bp_s:BP>140?'ಹೆಚ್ಚು':BP>120?'ಸ್ವಲ್ಪ ಹೆಚ್ಚು':'ಸಾಮಾನ್ಯ',
+  lk_chol_s:CHOL>=240?'ಹೆಚ್ಚು':CHOL>=200?'ಗಡಿ':'ಸಾಮಾನ್ಯ',lk_hr_s:HR>100?'ವೇಗ':HR<60?'ನಿಧಾನ':'ಸಾಮಾನ್ಯ',
+  lk_sugar_v:SUGAR=='1'?'ಹೆಚ್ಚು':'ಸಾಮಾನ್ಯ',lk_sugar_s:SUGAR=='1'?'ಹೆಚ್ಚು':'ಸಾಮಾನ್ಯ',
+  lk_chest_v:({0:'ಸಾಮಾನ್ಯ ಆಂಜಿನಾ',1:'ಅಸಾಮಾನ್ಯ ಆಂಜಿನಾ',2:'ನಾನ್-ಆಂಜಿನಲ್',3:'ರೋಗ ಲಕ್ಷಣವಿಲ್ಲ'})[CHEST],
+  lk_chest_s:CHEST=='0'?'ಹೆಚ್ಚು':CHEST=='1'||CHEST=='2'?'ಮಧ್ಯಮ':'ಕಡಿಮೆ',
+  lk_emerg_t:'ತುರ್ತು ಕ್ರಮ ಅಗತ್ಯ',lk_emerg_b:'ತಕ್ಷಣ ತುರ್ತು ಹೃದಯ ಚಿಕಿತ್ಸೆ ಪಡೆಯಿರಿ. ಎದೆ ನೋವಿದ್ದರೆ 112 ಕರೆ ಮಾಡಿ.',
+  lk_btn_new:'ಹೊಸ ಮೌಲ್ಯಮಾಪನ',lk_btn_hist:'ಎಲ್ಲ ವರದಿಗಳು',lk_btn_dash:'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
+  lk_r1:{Low:'ವಾರಕ್ಕೆ 150+ ನಿಮಿಷ ವ್ಯಾಯಾಮ',Moderate:'2-4 ವಾರಗಳಲ್ಲಿ ವೈದ್ಯರನ್ನು ಭೇಟಿ ಮಾಡಿ',High:'1 ವಾರದಲ್ಲಿ ಹೃದ್ರೋಗ ತಜ್ಞ',Critical:'ತಕ್ಷಣ ತುರ್ತು ಹೃದಯ ಮೌಲ್ಯಮಾಪನ'},
+  lk_r2:{Low:'DASH ಅಥವಾ ಮೆಡಿಟರೇನಿಯನ್ ಆಹಾರ',Moderate:'ಸೋಡಿಯಂ 2,300 mg ಕ್ಕಿಂತ ಕಡಿಮೆ',High:'12-ಲೀಡ್ ECG ಮತ್ತು ಒತ್ತಡ ಪರೀಕ್ಷೆ',Critical:'ECG, ಟ್ರೋಪೋನಿನ್, ಹೃದಯ ಚಿತ್ರಣ'},
+  lk_r3:{Low:'ವಾರ್ಷಿಕ BP ಮತ್ತು ಕೊಲೆಸ್ಟರಾಲ್ ಪರೀಕ್ಷೆ',Moderate:'ವಾರಕ್ಕೆ BP ಮೇಲ್ವಿಚಾರಣೆ',High:'ತೀವ್ರ ವ್ಯಾಯಾಮ ತಪ್ಪಿಸಿ',Critical:'ಕುಟುಂಬ ಸದಸ್ಯರಿಗೆ ತಿಳಿಸಿ'},
+  lk_r4:{Low:'ತಂಬಾಕು ತ್ಯಜಿಸಿ, ಮದ್ಯ ಕಡಿಮೆ ಮಾಡಿ',Moderate:'ಮೇಲ್ವಿಚಾರಿಸಿದ ವ್ಯಾಯಾಮ ಕಾರ್ಯಕ್ರಮ',High:'ಪ್ರಸ್ತುತ ಔಷಧಗಳ ಪರಾಮರ್ಶೆ',Critical:'ವಾಹನ ಚಲಾಯಿಸಬೇಡಿ — ತುರ್ತು ಸೇವೆ ಕರೆ ಮಾಡಿ'},
+  lk_r5:{Low:'BMI 18.5-24.9 ನಿರ್ವಹಿಸಿ',Moderate:'ಸ್ಟಾಟಿನ್ ಚಿಕಿತ್ಸೆ ಚರ್ಚಿಸಿ',High:'ನಿರಂತರ BP ಮೇಲ್ವಿಚಾರಣೆ',Critical:''},
+  vi:function(){return 'ನಿಮ್ಮ SmartHeart ಹೃದಯ ಅಪಾಯ ಸ್ಕೋರ್ '+SCORE+' ಶೇಕಡಾ, '+({Low:'ಕಡಿಮೆ ಅಪಾಯ',Moderate:'ಮಧ್ಯಮ ಅಪಾಯ',High:'ಹೆಚ್ಚು ಅಪಾಯ',Critical:'ನಿರ್ಣಾಯಕ ಅಪಾಯ'})[SEV]+'. '+({Low:'ನಿಮ್ಮ ಹೃದಯ ಆರೋಗ್ಯ ಉತ್ತಮವಾಗಿದೆ.',Moderate:'ಕೆಲವು ಅಪಾಯ ಅಂಶಗಳಿವೆ. ವೈದ್ಯರನ್ನು ಸಂಪರ್ಕಿಸಿ.',High:'ಹೆಚ್ಚಿನ ಅಪಾಯ. ಹೃದ್ರೋಗ ತಜ್ಞರನ್ನು ಭೇಟಿ ಮಾಡಿ.',Critical:'ನಿರ್ಣಾಯಕ ಅಪಾಯ. ತಕ್ಷಣ ತುರ್ತು ಸೇವೆ ಪಡೆಯಿರಿ.'})[SEV];}
+},
+ml:{label:'മലയാളം',lc:'ml-IN',name:'Malayalam',dir:'ltr',
+  lk_risk_lbl:'റിസ്ക് സ്കോർ',lk_assess_title:'ഹൃദയ അപകട വിലയിരുത്തൽ',
+  lk_sev_label:({Low:'കുറഞ്ഞ അപകടം',Moderate:'മിതമായ അപകടം',High:'ഉയർന്ന അപകടം',Critical:'ഗുരുതരമായ അപകടം'})[SEV],
+  lk_sev_short:({Low:'കുറഞ്ഞ',Moderate:'മിതമായ',High:'ഉയർന്ന',Critical:'ഗുരുതരം'})[SEV],
+  lk_explanation:({Low:'നിങ്ങളുടെ ഹൃദയ ആരോഗ്യം സാധാരണ പരിധിയിലാണ്.',Moderate:'ചില അപകട ഘടകങ്ങൾ ശ്രദ്ധ ആവശ്യപ്പെടുന്നു.',High:'ഹൃദയ അപകടം ഉയർന്നതാണ്. ഉടൻ ഡോക്ടറെ സന്ദർശിക്കുക.',Critical:'ഗുരുതരമായ അപകടം — ഉടൻ അടിയന്തര വൈദ്യ സഹായം തേടുക.'})[SEV],
+  lk_ref_lbl:'റിപ്പോർട്ട് ID',lk_gauge:'റിസ്ക് ഗേജ്',lk_feat_title:'AI ഫീച്ചർ പ്രാധാന്യം',lk_vitals:'ക്ലിനിക്കൽ വൈറ്റൽസ്',lk_recs:'ശുപാർശ ചെയ്ത നടപടികൾ',
+  lk_age:'പ്രായം',lk_sex:'ലിംഗം',lk_bp:'രക്തസമ്മർദ്ദം',lk_chol:'കൊളസ്ട്രോൾ',lk_hr:'ഹൃദയ മിടിപ്പ്',lk_sugar:'രക്ത പഞ്ചസാര',lk_chest:'നെഞ്ച് വേദന',
+  lk_gender:GEN=='1'?'പുരുഷൻ':'സ്ത്രീ',lk_bp_s:BP>140?'ഉയർന്നത്':BP>120?'അൽപ്പം ഉയർന്നത്':'സാധാരണം',
+  lk_chol_s:CHOL>=240?'ഉയർന്നത്':CHOL>=200?'അതിർത്തി':'സാധാരണം',lk_hr_s:HR>100?'വേഗം':HR<60?'പതുക്കെ':'സാധാരണം',
+  lk_sugar_v:SUGAR=='1'?'ഉയർന്നത്':'സാധാരണം',lk_sugar_s:SUGAR=='1'?'ഉയർന്നത്':'സാധാരണം',
+  lk_chest_v:({0:'സാധാരണ ആഞ്ചിന',1:'അസാധാരണ ആഞ്ചിന',2:'നോൺ-ആഞ്ചിനൽ',3:'ലക്ഷണങ്ങൾ ഇല്ല'})[CHEST],
+  lk_chest_s:CHEST=='0'?'ഉയർന്നത്':CHEST=='1'||CHEST=='2'?'മിതം':'കുറഞ്ഞ',
+  lk_emerg_t:'അടിയന്തര നടപടി ആവശ്യം',lk_emerg_b:'ഉടൻ അടിയന്തര ഹൃദയ ചികിൽസ തേടുക. നെഞ്ച് വേദനയുണ്ടെങ്കിൽ 112 വിളിക്കുക.',
+  lk_btn_new:'പുതിയ വിലയിരുത്തൽ',lk_btn_hist:'എല്ലാ റിപ്പോർട്ടുകളും',lk_btn_dash:'ഡാഷ്‌ബോർഡ്',
+  lk_r1:{Low:'ആഴ്ചയിൽ 150+ മിനിറ്റ് വ്യായാമം',Moderate:'2-4 ആഴ്ചയ്ക്കുള്ളിൽ ഡോക്ടറെ കാണുക',High:'1 ആഴ്ചയ്ക്കുള്ളിൽ കാർഡിയോളജിസ്റ്റ്',Critical:'ഉടൻ അടിയന്തര ഹൃദയ വിലയിരുത്തൽ'},
+  lk_r2:{Low:'DASH അല്ലെങ്കിൽ ഭൂമദ്ധ്യ ആഹാരം',Moderate:'സോഡിയം 2,300 mg-ൽ കുറഞ്ഞ അളവിൽ',High:'12-ലീഡ് ECG, സ്ട്രെസ് ടെസ്റ്റ്',Critical:'ECG, ട്രോപോണിൻ, ഹൃദയ ഇമേജിംഗ്'},
+  lk_r3:{Low:'വാർഷിക BP, കൊളസ്ട്രോൾ പരിശോധന',Moderate:'ആഴ്ചതോറും BP നിരീക്ഷണം',High:'കഠിനമായ വ്യായാമം ഒഴിവാക്കുക',Critical:'കുടുംബാംഗത്തെ അറിയിക്കുക'},
+  lk_r4:{Low:'പുകവലി നിർത്തുക, മദ്യം കുറയ്ക്കുക',Moderate:'മേൽനോട്ടത്തോടെ വ്യായാമ പദ്ധതി',High:'നിലവിലെ മരുന്നുകൾ പുനരവലോകനം',Critical:'വാഹനം ഓടിക്കരുത് — അടിയന്തര സേവനം വിളിക്കുക'},
+  lk_r5:{Low:'BMI 18.5-24.9 നിലനിർത്തുക',Moderate:'സ്റ്റാറ്റിൻ തെറാപ്പി ചർച്ച ചെയ്യുക',High:'തുടർച്ചയായ BP നിരീക്ഷണം',Critical:''},
+  vi:function(){return 'നിങ്ങളുടെ SmartHeart ഹൃദയ അപകട സ്കോർ '+SCORE+' ശതമാനം, '+({Low:'കുറഞ്ഞ അപകടം',Moderate:'മിതമായ അപകടം',High:'ഉയർന്ന അപകടം',Critical:'ഗുരുതരമായ അപകടം'})[SEV]+'. '+({Low:'ഹൃദയ ആരോഗ്യം നല്ലതാണ്.',Moderate:'ചില ഘടകങ്ങൾ ഉണ്ട്. ഡോക്ടറെ കാണുക.',High:'ഉയർന്ന അപകടം. ഹൃദ്‌രോഗ വിദഗ്ദ്ധനെ സന്ദർശിക്കുക.',Critical:'ഗുരുതരം. ഉടൻ അടിയന്തര സേവനം തേടുക.'})[SEV];}
+},
+bn:{label:'বাংলা',lc:'bn-IN',name:'Bengali',dir:'ltr',
+  lk_risk_lbl:'ঝুঁকি স্কোর',lk_assess_title:'হৃদয় ঝুঁকি মূল্যায়ন',
+  lk_sev_label:({Low:'কম ঝুঁকি',Moderate:'মাঝারি ঝুঁকি',High:'উচ্চ ঝুঁকি',Critical:'সংকটজনক ঝুঁকি'})[SEV],
+  lk_sev_short:({Low:'কম',Moderate:'মাঝারি',High:'উচ্চ',Critical:'সংকটজনক'})[SEV],
+  lk_explanation:({Low:'আপনার হৃদয়ের স্বাস্থ্য স্বাভাবিক সীমার মধ্যে আছে।',Moderate:'কিছু ঝুঁকি কারণ মনোযোগ প্রয়োজন।',High:'হৃদয় ঝুঁকি বেশি। অবিলম্বে ডাক্তারের সাথে যোগাযোগ করুন।',Critical:'সংকটজনক ঝুঁকি — অবিলম্বে জরুরি চিকিৎসা নিন।'})[SEV],
+  lk_ref_lbl:'রিপোর্ট ID',lk_gauge:'ঝুঁকি গেজ',lk_feat_title:'AI বৈশিষ্ট্য গুরুত্ব',lk_vitals:'ক্লিনিক্যাল ভাইটালস',lk_recs:'প্রস্তাবিত পদক্ষেপ',
+  lk_age:'বয়স',lk_sex:'লিঙ্গ',lk_bp:'রক্তচাপ',lk_chol:'কোলেস্টেরল',lk_hr:'হৃদয় স্পন্দন হার',lk_sugar:'রক্তে শর্করা',lk_chest:'বুকে ব্যথা',
+  lk_gender:GEN=='1'?'পুরুষ':'মহিলা',lk_bp_s:BP>140?'উচ্চ':BP>120?'কিছুটা উচ্চ':'স্বাভাবিক',
+  lk_chol_s:CHOL>=240?'উচ্চ':CHOL>=200?'সীমারেখা':'স্বাভাবিক',lk_hr_s:HR>100?'দ্রুত':HR<60?'ধীর':'স্বাভাবিক',
+  lk_sugar_v:SUGAR=='1'?'উচ্চ':'স্বাভাবিক',lk_sugar_s:SUGAR=='1'?'উচ্চ':'স্বাভাবিক',
+  lk_chest_v:({0:'সাধারণ এনজাইনা',1:'অসাধারণ এনজাইনা',2:'নন-এনজাইনাল',3:'উপসর্গহীন'})[CHEST],
+  lk_chest_s:CHEST=='0'?'উচ্চ':CHEST=='1'||CHEST=='2'?'মাঝারি':'কম',
+  lk_emerg_t:'জরুরি পদক্ষেপ প্রয়োজন',lk_emerg_b:'অবিলম্বে জরুরি হৃদয় চিকিৎসা নিন। বুকে ব্যথা হলে 112 কল করুন।',
+  lk_btn_new:'নতুন মূল্যায়ন',lk_btn_hist:'সব রিপোর্ট',lk_btn_dash:'ড্যাশবোর্ড',
+  lk_r1:{Low:'সপ্তাহে 150+ মিনিট ব্যায়াম',Moderate:'2-4 সপ্তাহে ডাক্তার পরামর্শ',High:'1 সপ্তাহে কার্ডিওলজিস্ট',Critical:'অবিলম্বে জরুরি কার্ডিয়াক মূল্যায়ন'},
+  lk_r2:{Low:'DASH বা ভূমধ্যসাগরীয় খাদ্য',Moderate:'সোডিয়াম 2,300 mg এর কম রাখুন',High:'12-লিড ECG এবং স্ট্রেস টেস্ট',Critical:'ECG, ট্রোপোনিন, কার্ডিয়াক ইমেজিং'},
+  lk_r3:{Low:'বার্ষিক BP ও কোলেস্টেরল পরীক্ষা',Moderate:'সাপ্তাহিক BP পর্যবেক্ষণ',High:'কঠিন ব্যায়াম এড়িয়ে চলুন',Critical:'পরিবারের সদস্যকে জানান'},
+  lk_r4:{Low:'তামাক ছাড়ুন, মদ্যপান কমান',Moderate:'তত্ত্বাবধানে ব্যায়াম কার্যক্রম',High:'বর্তমান ওষুধ পর্যালোচনা করুন',Critical:'গাড়ি চালাবেন না — জরুরি সেবা কল করুন'},
+  lk_r5:{Low:'BMI 18.5-24.9 বজায় রাখুন',Moderate:'স্ট্যাটিন থেরাপি আলোচনা করুন',High:'ক্রমাগত BP পর্যবেক্ষণ',Critical:''},
+  vi:function(){return 'আপনার SmartHeart হৃদয় ঝুঁকি স্কোর '+SCORE+' শতাংশ, '+({Low:'কম ঝুঁকি',Moderate:'মাঝারি ঝুঁকি',High:'উচ্চ ঝুঁকি',Critical:'সংকটজনক ঝুঁকি'})[SEV]+'. '+({Low:'আপনার হৃদয়ের স্বাস্থ্য ভালো।',Moderate:'কিছু ঝুঁকি কারণ আছে। ডাক্তারের সাথে যোগাযোগ করুন।',High:'উচ্চ ঝুঁকি। কার্ডিওলজিস্টের সাথে দেখা করুন।',Critical:'সংকটজনক। অবিলম্বে জরুরি সেবা নিন।'})[SEV];}
+},
+mr:{label:'मराठी',lc:'mr-IN',name:'Marathi',dir:'ltr',
+  lk_risk_lbl:'जोखीम गुण',lk_assess_title:'हृदय जोखीम मूल्यमापन',
+  lk_sev_label:({Low:'कमी जोखीम',Moderate:'मध्यम जोखीम',High:'उच्च जोखीम',Critical:'गंभीर जोखीम'})[SEV],
+  lk_sev_short:({Low:'कमी',Moderate:'मध्यम',High:'उच्च',Critical:'गंभीर'})[SEV],
+  lk_explanation:({Low:'तुमचे हृदयाचे आरोग्य सामान्य मर्यादेत आहे.',Moderate:'काही जोखीम घटकांकडे लक्ष देणे आवश्यक आहे.',High:'हृदयाची जोखीम जास्त आहे. त्वरित डॉक्टरांशी संपर्क करा.',Critical:'गंभीर जोखीम — त्वरित आपत्कालीन वैद्यकीय सेवा घ्या.'})[SEV],
+  lk_ref_lbl:'अहवाल ID',lk_gauge:'जोखीम मापक',lk_feat_title:'AI वैशिष्ट्य महत्त्व',lk_vitals:'क्लिनिकल व्हायटल्स',lk_recs:'शिफारस केलेल्या कृती',
+  lk_age:'वय',lk_sex:'लिंग',lk_bp:'रक्तदाब',lk_chol:'कोलेस्टेरॉल',lk_hr:'हृदय गती',lk_sugar:'रक्तातील साखर',lk_chest:'छातीत दुखणे',
+  lk_gender:GEN=='1'?'पुरुष':'स्त्री',lk_bp_s:BP>140?'जास्त':BP>120?'थोडे जास्त':'सामान्य',
+  lk_chol_s:CHOL>=240?'जास्त':CHOL>=200?'सीमारेषा':'सामान्य',lk_hr_s:HR>100?'वेगवान':HR<60?'संथ':'सामान्य',
+  lk_sugar_v:SUGAR=='1'?'जास्त':'सामान्य',lk_sugar_s:SUGAR=='1'?'जास्त':'सामान्य',
+  lk_chest_v:({0:'ठराविक एंजिना',1:'अनपेक्षित एंजिना',2:'नॉन-एंजिनल',3:'लक्षणे नाहीत'})[CHEST],
+  lk_chest_s:CHEST=='0'?'जास्त':CHEST=='1'||CHEST=='2'?'मध्यम':'कमी',
+  lk_emerg_t:'आपत्कालीन कृती आवश्यक',lk_emerg_b:'त्वरित आपत्कालीन हृदय उपचार घ्या. छातीत दुखत असल्यास 112 वर कॉल करा.',
+  lk_btn_new:'नवीन मूल्यमापन',lk_btn_hist:'सर्व अहवाल',lk_btn_dash:'डॅशबोर्ड',
+  lk_r1:{Low:'आठवड्यात 150+ मिनिटे व्यायाम',Moderate:'2-4 आठवड्यात डॉक्टरांशी सल्लामसलत',High:'1 आठवड्यात हृदयरोग तज्ज्ञ',Critical:'त्वरित आपत्कालीन हृदय मूल्यमापन'},
+  lk_r2:{Low:'DASH किंवा भूमध्यसागरीय आहार',Moderate:'सोडियम 2,300 mg पेक्षा कमी ठेवा',High:'12-लीड ECG आणि स्ट्रेस टेस्ट',Critical:'ECG, ट्रोपोनिन, हृदय इमेजिंग'},
+  lk_r3:{Low:'वार्षिक BP आणि कोलेस्टेरॉल तपासणी',Moderate:'आठवड्यातून BP तपासणी',High:'तीव्र व्यायाम टाळा',Critical:'कुटुंबाच्या सदस्याला कळवा'},
+  lk_r4:{Low:'तंबाखू सोडा, मद्यपान कमी करा',Moderate:'पर्यवेक्षित व्यायाम कार्यक्रम',High:'सद्य औषधांचे पुनरावलोकन',Critical:'वाहन चालवू नका — आपत्कालीन सेवेला कॉल करा'},
+  lk_r5:{Low:'BMI 18.5-24.9 राखा',Moderate:'स्टॅटिन थेरपी चर्चा करा',High:'सतत BP निरीक्षण',Critical:''},
+  vi:function(){return 'तुमचा SmartHeart हृदय जोखीम गुण '+SCORE+' टक्के, '+({Low:'कमी जोखीम',Moderate:'मध्यम जोखीम',High:'उच्च जोखीम',Critical:'गंभीर जोखीम'})[SEV]+'. '+({Low:'तुमचे हृदय आरोग्य चांगले आहे.',Moderate:'काही जोखीम घटक आहेत. डॉक्टरांशी संपर्क करा.',High:'उच्च जोखीम. हृदयरोग तज्ज्ञांशी भेटा.',Critical:'गंभीर जोखीम. त्वरित आपत्कालीन सेवा घ्या.'})[SEV];}
+},
+fr:{label:'FR — Français',lc:'fr-FR',name:'Français',dir:'ltr',
+  lk_risk_lbl:'score de risque',lk_assess_title:'Évaluation du risque cardiaque',
+  lk_sev_label:(SEV_MAP[SEV]||{fr:SEV+' Risk'}).fr,lk_sev_short:({Low:'Faible',Moderate:'Modéré',High:'Élevé',Critical:'Critique'})[SEV],
+  lk_explanation:({Low:'Votre santé cardiaque est dans les limites normales.',Moderate:"Certains facteurs de risque nécessitent de l'attention.",High:'Votre risque cardiaque est élevé. Consultez un médecin rapidement.',Critical:'Risque critique — consultez les urgences immédiatement.'})[SEV],
+  lk_ref_lbl:'ID du rapport',lk_gauge:'Jauge de risque',lk_feat_title:'Importance des caractéristiques IA',lk_vitals:'Signes vitaux',lk_recs:'Actions recommandées',
+  lk_age:'Âge',lk_sex:'Sexe',lk_bp:'Tension artérielle',lk_chol:'Cholestérol',lk_hr:'Fréquence cardiaque',lk_sugar:'Glycémie',lk_chest:'Douleur thoracique',
+  lk_gender:GEN=='1'?'Masculin':'Féminin',lk_bp_s:BP>140?'Élevé':BP>120?'Pré-élevé':'Normal',
+  lk_chol_s:CHOL>=240?'Élevé':CHOL>=200?'Limite':'Normal',lk_hr_s:HR>100?'Tachy':HR<60?'Brady':'Normal',
+  lk_sugar_v:SUGAR=='1'?'Élevé':'Normal',lk_sugar_s:SUGAR=='1'?'Élevé':'Normal',
+  lk_chest_v:({0:'Angor typique',1:'Angor atypique',2:'Douleur non anginale',3:'Asymptomatique'})[CHEST],
+  lk_chest_s:CHEST=='0'?'Élevé':CHEST=='1'||CHEST=='2'?'Modéré':'Faible',
+  lk_emerg_t:"Action d'urgence requise",lk_emerg_b:"Consultez les urgences cardiaques immédiatement. Appelez le 15 si vous ressentez une douleur thoracique.",
+  lk_btn_new:'Nouvelle évaluation',lk_btn_hist:'Tous les rapports',lk_btn_dash:'Tableau de bord',
+  lk_r1:{Low:"150+ min/semaine d'exercice modéré",Moderate:'Consultation médicale dans 2–4 semaines',High:'Cardiologue dans 1 semaine',Critical:"Évaluation cardiaque d'urgence"},
+  lk_r2:{Low:'Régime DASH ou méditerranéen',Moderate:'Réduire sodium à moins de 2 300 mg/jour',High:'ECG 12 dérivations et test de stress',Critical:'ECG, troponines, imagerie cardiaque'},
+  lk_r3:{Low:'Dépistage annuel TA et cholestérol',Moderate:'TA domicile chaque semaine',High:"Éviter l'exercice intense",Critical:'Informer un proche'},
+  lk_r4:{Low:'Éviter tabac et limiter alcool',Moderate:"Programme d'exercice supervisé",High:'Réviser les médicaments actuels',Critical:'Ne pas conduire — appeler le 15'},
+  lk_r5:{Low:'Maintenir un IMC entre 18,5–24,9',Moderate:'Envisager un traitement aux statines',High:'Surveillance continue de la TA',Critical:''},
+  vi:function(){return 'Votre score de risque cardiaque est de '+SCORE+' pour cent, '+(SEV_MAP[SEV]||{fr:SEV}).fr+'. '+({Low:"Votre santé cardiaque est bonne. Continuez l'exercice régulier.",Moderate:'Certains facteurs de risque sont présents. Consultez un médecin dans 2 à 4 semaines.',High:'Risque élevé. Consultez un cardiologue cette semaine.',Critical:'Risque critique. Consultez les urgences immédiatement.'})[SEV];}
+},
+de:{label:'DE — Deutsch',lc:'de-DE',name:'Deutsch',dir:'ltr',
+  lk_risk_lbl:'Risikoscore',lk_assess_title:'Herzrisikobeurteilung',
+  lk_sev_label:(SEV_MAP[SEV]||{de:SEV+' Risiko'}).de,lk_sev_short:({Low:'Gering',Moderate:'Mittel',High:'Hoch',Critical:'Kritisch'})[SEV],
+  lk_explanation:({Low:'Ihre Herzgesundheit liegt im normalen Bereich.',Moderate:'Einige Risikofaktoren erfordern Aufmerksamkeit.',High:'Ihr Herzrisiko ist hoch. Bitte konsultieren Sie sofort einen Arzt.',Critical:'Kritisches Risiko — sofort Notaufnahme aufsuchen.'})[SEV],
+  lk_ref_lbl:'Bericht-ID',lk_gauge:'Risikomesser',lk_feat_title:'KI-Merkmalsbedeutung',lk_vitals:'Klinische Vitalzeichen',lk_recs:'Empfohlene Maßnahmen',
+  lk_age:'Alter',lk_sex:'Geschlecht',lk_bp:'Blutdruck',lk_chol:'Cholesterin',lk_hr:'Herzfrequenz',lk_sugar:'Blutzucker',lk_chest:'Brustschmerz',
+  lk_gender:GEN=='1'?'Männlich':'Weiblich',lk_bp_s:BP>140?'Erhöht':BP>120?'Leicht erhöht':'Normal',
+  lk_chol_s:CHOL>=240?'Hoch':CHOL>=200?'Grenzwertig':'Normal',lk_hr_s:HR>100?'Tachy':HR<60?'Brady':'Normal',
+  lk_sugar_v:SUGAR=='1'?'Erhöht':'Normal',lk_sugar_s:SUGAR=='1'?'Hoch':'Normal',
+  lk_chest_v:({0:'Typische Angina',1:'Atypische Angina',2:'Nicht-anginaler Schmerz',3:'Asymptomatisch'})[CHEST],
+  lk_chest_s:CHEST=='0'?'Hoch':CHEST=='1'||CHEST=='2'?'Mittel':'Gering',
+  lk_emerg_t:'Notfallmaßnahme erforderlich',lk_emerg_b:'Sofort Herznotaufnahme aufsuchen. Bei Brustschmerzen 112 anrufen.',
+  lk_btn_new:'Neue Bewertung',lk_btn_hist:'Alle Berichte',lk_btn_dash:'Dashboard',
+  lk_r1:{Low:'150+ Min/Woche moderater Sport',Moderate:'Arztbesuch in 2–4 Wochen',High:'Kardiologische Konsultation in 1 Woche',Critical:'Sofortige kardiologische Notfallbeurteilung'},
+  lk_r2:{Low:'DASH- oder Mittelmeerdiät',Moderate:'Natrium auf unter 2.300 mg/Tag',High:'12-Kanal-EKG und Belastungstest',Critical:'EKG, Troponin, Herzbildgebung'},
+  lk_r3:{Low:'Jährliches BP-Cholesterin-Screening',Moderate:'Blutdruck wöchentlich zu Hause messen',High:'Anstrengende Bewegung vermeiden',Critical:'Familienmitglied benachrichtigen'},
+  lk_r4:{Low:'Tabak vermeiden, Alkohol einschränken',Moderate:'Betreutes Sportprogramm beginnen',High:'Aktuelle Medikamente überprüfen',Critical:'Nicht fahren — Notarzt rufen'},
+  lk_r5:{Low:'BMI zwischen 18,5–24,9 halten',Moderate:'Statintherapie in Betracht ziehen',High:'Kontinuierliche Blutdrucküberwachung',Critical:''},
+  vi:function(){return 'Ihr Herzrisikowert beträgt '+SCORE+' Prozent, '+(SEV_MAP[SEV]||{de:SEV}).de+'. '+({Low:'Ihre Herzgesundheit ist gut. Setzen Sie Bewegung fort.',Moderate:'Einige Risikofaktoren vorhanden. Bitte besuchen Sie einen Arzt.',High:'Hohes Herzrisiko. Suchen Sie einen Kardiologen auf.',Critical:'Kritisch. Sofort Notaufnahme aufsuchen.'})[SEV];}
+},
+es:{label:'ES — Español',lc:'es-ES',name:'Español',dir:'ltr',
+  lk_risk_lbl:'puntuación de riesgo',lk_assess_title:'Evaluación de riesgo cardíaco',
+  lk_sev_label:(SEV_MAP[SEV]||{es:SEV+' Risk'}).es,lk_sev_short:({Low:'Bajo',Moderate:'Moderado',High:'Alto',Critical:'Crítico'})[SEV],
+  lk_explanation:({Low:'Su salud cardíaca se encuentra en límites normales.',Moderate:'Algunos factores de riesgo requieren atención.',High:'Su riesgo cardíaco es alto. Consulte a un médico de inmediato.',Critical:'Riesgo crítico — busque atención de emergencia de inmediato.'})[SEV],
+  lk_ref_lbl:'ID del informe',lk_gauge:'Medidor de riesgo',lk_feat_title:'Importancia de características IA',lk_vitals:'Signos vitales',lk_recs:'Acciones recomendadas',
+  lk_age:'Edad',lk_sex:'Sexo',lk_bp:'Presión arterial',lk_chol:'Colesterol',lk_hr:'Frecuencia cardíaca',lk_sugar:'Azúcar en sangre',lk_chest:'Dolor en el pecho',
+  lk_gender:GEN=='1'?'Masculino':'Femenino',lk_bp_s:BP>140?'Elevada':BP>120?'Pre-alta':'Normal',
+  lk_chol_s:CHOL>=240?'Alto':CHOL>=200?'Límite':'Normal',lk_hr_s:HR>100?'Taqui':HR<60?'Bradi':'Normal',
+  lk_sugar_v:SUGAR=='1'?'Elevado':'Normal',lk_sugar_s:SUGAR=='1'?'Alto':'Normal',
+  lk_chest_v:({0:'Angina típica',1:'Angina atípica',2:'Dolor no anginoso',3:'Asintomático'})[CHEST],
+  lk_chest_s:CHEST=='0'?'Alto':CHEST=='1'||CHEST=='2'?'Moderado':'Bajo',
+  lk_emerg_t:'Acción de emergencia requerida',lk_emerg_b:'Busque atención cardíaca de emergencia. Llame al 112 si tiene dolor en el pecho.',
+  lk_btn_new:'Nueva evaluación',lk_btn_hist:'Todos los informes',lk_btn_dash:'Panel de control',
+  lk_r1:{Low:'150+ min/semana de ejercicio aeróbico',Moderate:'Consulta médica en 2–4 semanas',High:'Cardiólogo en 1 semana',Critical:'Evaluación cardíaca de emergencia'},
+  lk_r2:{Low:'Dieta DASH o mediterránea',Moderate:'Reducir sodio a menos de 2.300 mg/día',High:'ECG de 12 derivaciones y prueba de esfuerzo',Critical:'ECG, troponinas, imagen cardíaca'},
+  lk_r3:{Low:'Chequeo anual de PA y colesterol',Moderate:'Monitorear PA en casa semanalmente',High:'Evitar ejercicio extenuante',Critical:'Notificar a un familiar'},
+  lk_r4:{Low:'Evitar tabaco y limitar alcohol',Moderate:'Programa de ejercicio supervisado',High:'Revisar y optimizar medicamentos',Critical:'No conducir — llamar a emergencias'},
+  lk_r5:{Low:'Mantener IMC entre 18,5–24,9',Moderate:'Considerar terapia con estatinas',High:'Monitoreo continuo de PA',Critical:''},
+  vi:function(){return 'Su puntuación de riesgo cardíaco es del '+SCORE+' por ciento, '+(SEV_MAP[SEV]||{es:SEV}).es+'. '+({Low:'Su salud cardíaca es buena. Continúe con el ejercicio regular.',Moderate:'Hay factores de riesgo. Consulte a un médico en 2 a 4 semanas.',High:'Riesgo alto. Consulte a un cardiólogo esta semana.',Critical:'Riesgo crítico. Busque atención de emergencia de inmediato.'})[SEV];}
+},
+zh:{label:'中文',lc:'zh-CN',name:'中文',dir:'ltr',
+  lk_risk_lbl:'风险评分',lk_assess_title:'心脏风险评估',
+  lk_sev_label:(SEV_MAP[SEV]||{zh:SEV+' 风险'}).zh,lk_sev_short:({Low:'低',Moderate:'中等',High:'高',Critical:'严重'})[SEV],
+  lk_explanation:({Low:'您的心脏健康在正常范围内。',Moderate:'存在一些需要注意的风险因素。',High:'您的心脏风险较高，请立即就医。',Critical:'严重风险——请立即寻求急救服务。'})[SEV],
+  lk_ref_lbl:'报告编号',lk_gauge:'风险仪表盘',lk_feat_title:'AI特征重要性',lk_vitals:'临床指标',lk_recs:'建议措施',
+  lk_age:'年龄',lk_sex:'性别',lk_bp:'血压',lk_chol:'胆固醇',lk_hr:'心率',lk_sugar:'血糖',lk_chest:'胸痛',
+  lk_gender:GEN=='1'?'男性':'女性',lk_bp_s:BP>140?'偏高':BP>120?'略高':'正常',
+  lk_chol_s:CHOL>=240?'高':CHOL>=200?'临界':'正常',lk_hr_s:HR>100?'过速':HR<60?'过缓':'正常',
+  lk_sugar_v:SUGAR=='1'?'偏高':'正常',lk_sugar_s:SUGAR=='1'?'高':'正常',
+  lk_chest_v:({0:'典型心绞痛',1:'非典型心绞痛',2:'非心绞痛',3:'无症状'})[CHEST],
+  lk_chest_s:CHEST=='0'?'高':CHEST=='1'||CHEST=='2'?'中等':'低',
+  lk_emerg_t:'需要紧急处置',lk_emerg_b:'请立即寻求紧急心脏救治。如有胸痛请拨打120。',
+  lk_btn_new:'新评估',lk_btn_hist:'所有报告',lk_btn_dash:'仪表板',
+  lk_r1:{Low:'每周150+分钟有氧运动',Moderate:'2–4周内咨询医生',High:'1周内进行心脏科会诊',Critical:'立即进行急诊心脏评估'},
+  lk_r2:{Low:'DASH或地中海饮食',Moderate:'将钠摄入减至2300毫克以下',High:'心电图和运动试验',Critical:'心电图、肌钙蛋白、心脏影像'},
+  lk_r3:{Low:'每年血压和胆固醇筛查',Moderate:'每周在家监测血压',High:'避免剧烈运动',Critical:'通知家庭成员'},
+  lk_r4:{Low:'避免烟草，限制酒精',Moderate:'有监督的运动计划',High:'回顾并优化当前药物',Critical:'不要驾车——拨打急救电话'},
+  lk_r5:{Low:'保持BMI在18.5–24.9',Moderate:'考虑他汀类药物评估',High:'需要持续血压监测',Critical:''},
+  vi:function(){return '您好。您的心脏风险评分为'+SCORE+'百分比，'+(SEV_MAP[SEV]||{zh:SEV}).zh+'。'+({Low:'您的心脏健康状况良好，请继续保持。',Moderate:'存在一些风险因素，请在2至4周内就医。',High:'高风险，请在一周内咨询心脏科医生。',Critical:'情况严重，请立即寻求急救。'})[SEV];}
+},
+ar:{label:'عربي',lc:'ar-SA',name:'العربية',dir:'rtl',
+  lk_risk_lbl:'درجة المخاطر',lk_assess_title:'تقييم مخاطر القلب',
+  lk_sev_label:(SEV_MAP[SEV]||{ar:SEV+' خطر'}).ar,lk_sev_short:({Low:'منخفض',Moderate:'متوسط',High:'عالٍ',Critical:'حرج'})[SEV],
+  lk_explanation:({Low:'صحة قلبك ضمن الحدود الطبيعية.',Moderate:'بعض عوامل الخطر تحتاج اهتماماً.',High:'خطر القلب لديك مرتفع. يرجى مراجعة الطبيب فوراً.',Critical:'خطر حرج — اطلب الرعاية الطارئة فوراً.'})[SEV],
+  lk_ref_lbl:'معرّف التقرير',lk_gauge:'مقياس الخطر',lk_feat_title:'أهمية ميزات الذكاء الاصطناعي',lk_vitals:'العلامات الحيوية',lk_recs:'الإجراءات الموصى بها',
+  lk_age:'العمر',lk_sex:'الجنس',lk_bp:'ضغط الدم',lk_chol:'الكوليسترول',lk_hr:'معدل ضربات القلب',lk_sugar:'سكر الدم',lk_chest:'ألم الصدر',
+  lk_gender:GEN=='1'?'ذكر':'أنثى',lk_bp_s:BP>140?'مرتفع':BP>120?'مرتفع قليلاً':'طبيعي',
+  lk_chol_s:CHOL>=240?'مرتفع':CHOL>=200?'حدّي':'طبيعي',lk_hr_s:HR>100?'سريع':HR<60?'بطيء':'طبيعي',
+  lk_sugar_v:SUGAR=='1'?'مرتفع':'طبيعي',lk_sugar_s:SUGAR=='1'?'مرتفع':'طبيعي',
+  lk_chest_v:({0:'ذبحة صدرية نموذجية',1:'ذبحة غير نموذجية',2:'ألم غير ذبحي',3:'بدون أعراض'})[CHEST],
+  lk_chest_s:CHEST=='0'?'عالٍ':CHEST=='1'||CHEST=='2'?'متوسط':'منخفض',
+  lk_emerg_t:'مطلوب إجراء طارئ',lk_emerg_b:'اطلب رعاية القلب الطارئة فوراً. اتصل بـ 112 عند الشعور بألم الصدر.',
+  lk_btn_new:'تقييم جديد',lk_btn_hist:'جميع التقارير',lk_btn_dash:'لوحة التحكم',
+  lk_r1:{Low:'150+ دقيقة أسبوعياً تمارين معتدلة',Moderate:'استشارة طبية خلال 2–4 أسابيع',High:'استشارة أمراض القلب خلال أسبوع',Critical:'تقييم قلبي طارئ فوري'},
+  lk_r2:{Low:'نظام غذائي DASH أو متوسطي',Moderate:'تقليل الصوديوم إلى أقل من 2300 ملغم',High:'تخطيط قلب 12 قناة واختبار إجهاد',Critical:'تخطيط قلب وتروبونين وتصوير'},
+  lk_r3:{Low:'فحص سنوي للضغط والكوليسترول',Moderate:'قياس ضغط الدم أسبوعياً',High:'تجنب التمارين الشاقة',Critical:'إخطار أحد أفراد الأسرة'},
+  lk_r4:{Low:'تجنب التبغ وتقليل الكحول',Moderate:'بدء برنامج تمارين مشرف عليه',High:'مراجعة الأدوية الحالية',Critical:'لا تقد السيارة — اتصل بالطوارئ'},
+  lk_r5:{Low:'الحفاظ على مؤشر كتلة الجسم 18.5–24.9',Moderate:'النظر في علاج الستاتين',High:'مراقبة مستمرة لضغط الدم',Critical:''},
+  vi:function(){return 'مرحباً. درجة مخاطر قلبك هي '+SCORE+' بالمئة، '+(SEV_MAP[SEV]||{ar:SEV}).ar+'. '+({Low:'صحة قلبك جيدة. استمر في الرياضة والفحوصات.',Moderate:'توجد عوامل خطر. راجع الطبيب خلال أسبوعين إلى أربعة.',High:'نتيجة عالية المخاطر. استشر طبيب القلب هذا الأسبوع.',Critical:'هذا حرج. اطلب الرعاية الطارئة فوراً.'})[SEV];}
+}
+};
+
+/* ══════════════════════════════════════
+   LANGUAGE ENGINE
+══════════════════════════════════════ */
+var CL='en';
+function toggleLang(e){e.stopPropagation();document.getElementById('langWrap').classList.toggle('open');}
+document.addEventListener('click',function(){document.getElementById('langWrap').classList.remove('open');});
+
+function setLang(l,btn){
+  if(l===CL){document.getElementById('langWrap').classList.remove('open');return;}
+  stopVoice();CL=l;
+  var D=T[l];
+  document.getElementById('langLabel').textContent=D.label;
+  document.getElementById('vpLang').textContent=D.name;
+  document.querySelectorAll('.lang-item').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-l')===l);});
+  document.getElementById('langWrap').classList.remove('open');
+  // Fade all translatable elements
+  var els=document.querySelectorAll('[data-lk]');
+  els.forEach(function(e){e.classList.add('fading');});
+  setTimeout(function(){
+    els.forEach(function(e){
+      var k=e.getAttribute('data-lk'),v=D[k];
+      if(v===undefined)return;
+      if(typeof v==='object'&&v[SEV]!==undefined){e.textContent=v[SEV]||'';}
+      else{e.textContent=v;}
+    });
+    document.getElementById('recsBox').style.direction=D.dir==='rtl'?'rtl':'ltr';
+    els.forEach(function(e){e.classList.remove('fading');});
+  },200);
+}
+
+/* ══════════════════════════════════════
+   VOICE ENGINE
+══════════════════════════════════════ */
+var VS=window.speechSynthesis,VU=null,VP=false,PT=null;
+function fmt(s){if(!isFinite(s)||s<0)return'0:00';return Math.floor(s/60)+':'+(Math.floor(s%60)<10?'0':'')+Math.floor(s%60);}
+function wave(on){document.querySelectorAll('#vpWave .wbar').forEach(function(b,i){if(on){b.classList.add('lit');b.style.animationDelay=(i*.04)+'s';}else{b.classList.remove('lit');b.style.height=[10,6,14,8,18,5,12,9,16,7,13,11][i]+'px';}});}
+
+function startVoice(){
+  if(!VS)return;VS.cancel();
+  var D=T[CL],txt=D.vi();
+  VU=new SpeechSynthesisUtterance(txt);
+  VU.rate=0.94;VU.pitch=1.0;VU.lang=D.lc;
+  var voices=VS.getVoices(),lc=D.lc.split('-')[0];
+  var pref=voices.find(function(v){return v.lang.startsWith(D.lc)&&(v.name.indexOf('Google')>-1||v.name.indexOf('Premium')>-1||v.name.indexOf('Natural')>-1);});
+  if(!pref)pref=voices.find(function(v){return v.lang.startsWith(lc);});
+  if(pref)VU.voice=pref;
+  var words=txt.split(/\s+/).length,dur=words/2.2;
+  document.getElementById('vpDur').textContent=fmt(dur);
+  var t0=Date.now();
+  VU.onstart=function(){
+    VP=true;
+    document.getElementById('vpIcon').className='fas fa-pause';
+    document.getElementById('vpBtn').classList.add('on');
+    wave(true);
+    PT=setInterval(function(){
+      if(!VP){clearInterval(PT);return;}
+      var el=(Date.now()-t0)/1000;
+      document.getElementById('vpFill').style.width=Math.min(el/dur*100,100)+'%';
+      document.getElementById('vpEl').textContent=fmt(el);
+    },280);
+  };
+  VU.onend=VU.onerror=function(){
+    VP=false;clearInterval(PT);
+    document.getElementById('vpIcon').className='fas fa-play';
+    document.getElementById('vpBtn').classList.remove('on');
+    wave(false);
+    if(VU.type!=='error'){
+      document.getElementById('vpFill').style.width='100%';
+      setTimeout(function(){document.getElementById('vpFill').style.width='0%';document.getElementById('vpEl').textContent='0:00';},2000);
+    }
+  };
+  VS.speak(VU);
+}
+
+function toggleVoice(){if(!VS)return;if(VP){VS.cancel();VP=false;clearInterval(PT);document.getElementById('vpIcon').className='fas fa-play';document.getElementById('vpBtn').classList.remove('on');wave(false);}else{startVoice();}}
+function stopVoice(){if(VS)VS.cancel();VP=false;clearInterval(PT);document.getElementById('vpIcon').className='fas fa-play';document.getElementById('vpBtn').classList.remove('on');wave(false);document.getElementById('vpFill').style.width='0%';document.getElementById('vpEl').textContent='0:00';}
+function replayVoice(){stopVoice();setTimeout(startVoice,200);}
+
+/* ── Auto-play voice on page load (1 s delay, no overlay) ── */
+setTimeout(function(){
+  if(!VS) return;
+  if(VS.getVoices().length > 0){
+    startVoice();
+  } else {
+    VS.addEventListener('voiceschanged', function(){ startVoice(); }, {once:true});
+  }
+}, 1000);
+</script>
+{% endblock %}

@@ -1,0 +1,157 @@
+{% set active = 'dashboard' %}
+{% extends "base.html" %}
+{% block title %}My Dashboard{% endblock %}
+{% block body %}
+{% include '_sidebar.html' %}
+
+<header class="topbar">
+  <button class="hmbg" aria-label="Menu"><i class="fas fa-bars"></i></button>
+  <div class="tb-left">
+    <div class="tb-title">My Dashboard</div>
+    <div class="tb-sub">SmartHeart · Patient Portal</div>
+  </div>
+  <div class="tb-right">
+    <div class="tb-chip"><i class="fas fa-calendar-day"></i><span class="live-date"></span></div>
+    <a href="/patient/assess" class="btn-p"><i class="fas fa-plus"></i><span class="hide-xs"> New Assessment</span></a>
+  </div>
+</header>
+
+<main class="pw pe">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ cat }} mb-3"><i class="fas fa-circle-info"></i> {{ msg }}</div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <!-- WELCOME BANNER -->
+  <div class="wbanner mb-4">
+    <div class="wbanner-deco"></div>
+    <div style="position:relative;">
+      <div class="wbanner-label">Patient Portal</div>
+      <div class="wbanner-title">Welcome back, {{ user.name.split(' ')[0] }} 👋</div>
+      <p class="wbanner-sub">
+        {% if total==0 %}No assessments yet — start your first cardiac check below.
+        {% else %}{{ total }} assessment(s) on record.{% if high_risk>0 %} <span style="color:#fca5a5;font-weight:600;">{{ high_risk }} high/critical result(s) require attention.</span>{% else %} Your recent results look encouraging.{% endif %}{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <!-- KPI ROW -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-4">
+      <div class="kpi kpi-blue">
+        <div class="kpi-bar"></div>
+        <div class="kpi-icon"><i class="fas fa-clipboard-list"></i></div>
+        <div class="kpi-val">{{ total }}</div>
+        <div class="kpi-lbl">Total Assessments</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="kpi kpi-red">
+        <div class="kpi-bar"></div>
+        <div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div>
+        <div class="kpi-val">{{ high_risk }}</div>
+        <div class="kpi-lbl">High / Critical</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="kpi {% if latest %}{% if latest.severity=='Low' %}kpi-green{% elif latest.severity=='Moderate' %}kpi-amber{% else %}kpi-red{% endif %}{% else %}kpi-blue{% endif %}">
+        <div class="kpi-bar"></div>
+        <div class="kpi-icon"><i class="fas fa-percent"></i></div>
+        <div class="kpi-val">{{ latest.risk_score|round(1) if latest else '—' }}</div>
+        <div class="kpi-lbl">Latest Risk Score</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUICK ACTIONS + LATEST -->
+  <div class="row g-3 mb-4">
+    <div class="col-lg-5">
+      <div class="card h-100">
+        <div class="ch"><i class="fas fa-bolt" style="color:var(--yellow);"></i> Quick Actions</div>
+        <div class="cb" style="display:flex;flex-direction:column;gap:10px;">
+          <a href="/patient/assess" class="bp" style="justify-content:center;padding:14px;font-size:14px;border-radius:10px;"><i class="fas fa-stethoscope"></i> Manual Heart Assessment</a>
+          <a href="/patient/scan-upload" class="bp" style="justify-content:center;padding:14px;font-size:14px;border-radius:10px;background:var(--green);" onmouseover="this.style.background='#047857'" onmouseout="this.style.background='var(--green)'"><i class="fas fa-upload"></i> Upload Scan Report</a>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <a href="/patient/reports" class="bo" style="justify-content:center;"><i class="fas fa-history"></i> My Reports</a>
+            <a href="/patient/prescriptions" class="bo" style="justify-content:center;position:relative;">
+              <i class="fas fa-prescription-bottle-medical"></i> Rx
+              {% if unread_rx and unread_rx>0 %}<span style="position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;font-family:var(--mono);">{{ unread_rx }}</span>{% endif %}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div class="card h-100">
+        <div class="ch"><i class="fas fa-chart-line" style="color:var(--blue);"></i> Latest Assessment</div>
+        <div class="cb">
+          {% if latest %}
+          <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+            <div style="text-align:center;min-width:88px;">
+              <div style="font-family:'Fraunces',serif;font-size:42px;font-weight:900;line-height:1;color:{% if latest.severity=='Low' %}var(--green){% elif latest.severity=='Moderate' %}var(--yellow){% elif latest.severity=='High' %}var(--orange){% else %}var(--red){% endif %};">{{ latest.risk_score|round(1) }}%</div>
+              <span class="rp rp-{{ latest.severity }}" style="margin-top:8px;display:inline-flex;"><span class="dot"></span>{{ latest.severity }}</span>
+            </div>
+            <div style="flex:1;min-width:160px;">
+              <div style="font-size:11.5px;color:var(--muted);margin-bottom:3px;font-family:var(--mono);"><i class="fas fa-calendar-alt me-1"></i>{{ latest.created_at[:16] }}</div>
+              <div class="mono mb-2">{{ latest.ref_id }}</div>
+              <p style="font-size:13px;color:#374151;line-height:1.65;margin:0 0 14px;">
+                {% if latest.severity=='Low' %}<i class="fas fa-circle-check" style="color:var(--green);"></i> Cardiac indicators look healthy. Continue monitoring annually.
+                {% elif latest.severity=='Moderate' %}<i class="fas fa-circle-exclamation" style="color:var(--yellow);"></i> Some risk factors detected. Medical consultation advisable.
+                {% elif latest.severity=='High' %}<i class="fas fa-triangle-exclamation" style="color:var(--orange);"></i> High-risk profile. Please consult a cardiologist promptly.
+                {% else %}<i class="fas fa-radiation" style="color:var(--red);"></i> <strong style="color:var(--red);">Critical risk.</strong> Seek immediate medical attention.{% endif %}
+              </p>
+              <div style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:5px;"><span>Risk Level</span><span>{{ latest.risk_score|round(1) }}%</span></div>
+              <div style="background:#f1f5f9;border-radius:6px;height:7px;overflow:hidden;"><div style="width:{{ latest.risk_score }}%;height:100%;border-radius:6px;background:{% if latest.severity=='Low' %}var(--green){% elif latest.severity=='Moderate' %}var(--yellow){% elif latest.severity=='High' %}var(--orange){% else %}var(--red){% endif %};transition:width .6s ease;"></div></div>
+            </div>
+          </div>
+          {% else %}
+          <div class="es"><span class="es-icon"><i class="fas fa-heartbeat"></i></span><h5>No assessments yet</h5><p>Run your first heart risk assessment to see results here.</p><a href="/patient/assess" class="bp" style="margin-top:13px;display:inline-flex;"><i class="fas fa-stethoscope"></i> Start Assessment</a></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRESCRIPTIONS -->
+  {% if prescriptions %}
+  <div class="card mb-4">
+    <div class="ch"><i class="fas fa-prescription" style="color:var(--blue);"></i> Doctor Prescriptions
+      {% if unread_rx and unread_rx>0 %}<span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:var(--mono);">{{ unread_rx }} new</span>{% endif %}
+      <a href="/patient/prescriptions" class="chr" style="font-size:12px;color:var(--blue);text-decoration:none;font-weight:600;">View all <i class="fas fa-arrow-right" style="font-size:10px;"></i></a>
+    </div>
+    <div class="cb p0"><div class="tw"><table class="tbl">
+      <thead><tr><th>Report</th><th>Doctor</th><th>Medications</th><th>Date</th><th>Risk</th><th></th></tr></thead>
+      <tbody>{% for rx in prescriptions %}
+      <tr>
+        <td class="mono">{{ rx.ref_id }}</td>
+        <td style="font-weight:600;color:var(--navy);"><i class="fas fa-user-doctor" style="color:var(--blue);margin-right:5px;"></i>{{ rx.doctor_name }}</td>
+        <td style="font-size:12.5px;color:var(--slate);max-width:180px;">{{ rx.medications[:60] }}{% if rx.medications|length>60 %}…{% endif %}</td>
+        <td style="color:var(--muted);font-size:12px;white-space:nowrap;font-family:var(--mono);">{{ rx.created_at[:16] }}</td>
+        <td><span class="rp rp-{{ rx.severity }}"><span class="dot"></span>{{ rx.severity }}</span></td>
+        <td><a href="/patient/prescription/{{ rx.report_id }}" class="bp bxs"><i class="fas fa-eye"></i> View{% if not rx.is_read %} <span style="background:rgba(255,255,255,.3);border-radius:3px;padding:1px 4px;font-size:9px;">NEW</span>{% endif %}</a></td>
+      </tr>{% endfor %}</tbody>
+    </table></div></div>
+  </div>
+  {% endif %}
+
+  <!-- RECENT REPORTS -->
+  {% if reports %}
+  <div class="card">
+    <div class="ch"><i class="fas fa-clock-rotate-left" style="color:var(--blue);"></i> Recent Reports <a href="/patient/reports" class="chr" style="font-size:12px;color:var(--blue);text-decoration:none;font-weight:600;">View all <i class="fas fa-arrow-right" style="font-size:10px;"></i></a></div>
+    <div class="cb p0"><div class="tw"><table class="tbl">
+      <thead><tr><th>Reference ID</th><th>Date</th><th>Risk %</th><th>Severity</th><th>Method</th><th>Notes</th><th></th></tr></thead>
+      <tbody>{% for r in reports %}
+      <tr>
+        <td class="mono">{{ r.ref_id }}</td>
+        <td style="color:var(--slate);font-size:12px;white-space:nowrap;font-family:var(--mono);">{{ r.created_at[:16] }}</td>
+        <td><span style="font-family:'Fraunces',serif;font-size:16px;font-weight:800;color:{% if r.severity=='Low' %}var(--green){% elif r.severity=='Moderate' %}var(--yellow){% elif r.severity=='High' %}var(--orange){% else %}var(--red){% endif %};">{{ r.risk_score|round(1) }}%</span></td>
+        <td><span class="rp rp-{{ r.severity }}"><span class="dot"></span>{{ r.severity }}</span></td>
+        <td><span style="font-size:11px;padding:3px 9px;border-radius:5px;font-weight:600;background:{% if r.input_method=='scan' %}#f3e8ff{% else %}var(--sky){% endif %};color:{% if r.input_method=='scan' %}#7c3aed{% else %}var(--blue){% endif %};">{{ r.input_method|title }}</span></td>
+        <td style="font-size:12.5px;color:var(--slate);max-width:140px;">{% if r.doctor_remarks %}<i class="fas fa-comment-medical" style="color:var(--blue);margin-right:3px;"></i>{{ r.doctor_remarks[:45] }}{% if r.doctor_remarks|length>45 %}…{% endif %}{% else %}<span style="color:var(--muted);">—</span>{% endif %}</td>
+        <td><a href="/patient/download-pdf/{{ r.id }}" class="bo bxs"><i class="fas fa-download" style="color:var(--red);"></i> PDF</a></td>
+      </tr>{% endfor %}</tbody>
+    </table></div></div>
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

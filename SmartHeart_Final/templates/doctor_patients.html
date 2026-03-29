@@ -1,0 +1,143 @@
+{% set active = 'patients' %}
+{% extends "base.html" %}
+{% block title %}All Patients{% endblock %}
+
+{% block body %}
+{% include '_sidebar.html' %}
+
+<header class="topbar">
+  <button class="hmbg" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+  <div class="tb-left">
+    <div class="tb-title">All Patient Reports</div>
+    <div class="tb-sub">SmartHeart &middot; Patient Management</div>
+  </div>
+  <div class="tb-right">
+    <div class="tb-chip"><i class="fas fa-calendar-day"></i><span class="live-date"></span></div>
+    <a href="/doctor/dashboard" class="btn-g"><i class="fas fa-arrow-left"></i><span class="hide-xs"> Dashboard</span></a>
+  </div>
+</header>
+
+<main class="pw pe">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ cat }} mb-3"><i class="fas fa-circle-info"></i> {{ msg }}</div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <!-- FILTER BAR -->
+  <div class="card mb-4">
+    <div class="cb" style="padding:14px 18px!important;">
+      <form method="GET" action="/doctor/patients">
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-md-5 col-lg-4">
+            <label class="fl">Search Patient</label>
+            <div style="position:relative;">
+              <i class="fas fa-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none;"></i>
+              <input type="text" name="search" value="{{ search }}" class="fi" placeholder="Name or email…" style="padding-left:32px;">
+            </div>
+          </div>
+          <div class="col-6 col-md-3 col-lg-2">
+            <label class="fl">Risk Level</label>
+            <select name="risk" class="fi">
+              <option value="all" {% if risk_filter=='all' %}selected{% endif %}>All Levels</option>
+              <option value="Low"      {% if risk_filter=='Low'      %}selected{% endif %}>Low</option>
+              <option value="Moderate" {% if risk_filter=='Moderate' %}selected{% endif %}>Moderate</option>
+              <option value="High"     {% if risk_filter=='High'     %}selected{% endif %}>High</option>
+              <option value="Critical" {% if risk_filter=='Critical' %}selected{% endif %}>Critical</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-3 col-lg-2">
+            <label class="fl">Date</label>
+            <input type="date" name="date" value="{{ date_filter }}" class="fi">
+          </div>
+          <div class="col-12 col-md-1 col-lg-4 d-flex gap-2">
+            <button type="submit" class="bp bsm"><i class="fas fa-filter"></i><span class="hide-xs"> Filter</span></button>
+            <a href="/doctor/patients" class="bo bsm"><i class="fas fa-rotate-right"></i><span class="hide-xs"> Reset</span></a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SUMMARY PILLS -->
+  {% if reports %}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+    <span style="font-size:12px;color:var(--slate);font-weight:600;display:flex;align-items:center;gap:4px;">
+      <i class="fas fa-list-ol" style="color:var(--muted);"></i> {{ reports|length }} result(s)
+    </span>
+    {% for sev in ['Low','Moderate','High','Critical'] %}
+    {% set cnt = reports|selectattr('severity','equalto',sev)|list|length %}
+    {% if cnt > 0 %}
+    <span class="rp rp-{{ sev }}" style="font-size:10.5px;"><span class="dot"></span>{{ sev }}: {{ cnt }}</span>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- REPORTS TABLE -->
+  <div class="card">
+    <div class="ch"><i class="fas fa-file-medical-alt" style="color:var(--blue);"></i> Patient Reports</div>
+    <div class="cb p0">
+      <div class="tw">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Report ID</th>
+              <th>Date</th>
+              <th>Method</th>
+              <th>BP</th>
+              <th>Cholesterol</th>
+              <th>Heart Rate</th>
+              <th>Risk Score</th>
+              <th>Severity</th>
+              <th>Remarks</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in reports %}
+            <tr>
+              <td>
+                <div style="font-weight:700;color:var(--navy);font-size:13.5px;line-height:1.3;">{{ r.patient_name }}</div>
+                <div style="font-size:11.5px;color:var(--muted);">{{ r.patient_email }}</div>
+              </td>
+              <td class="mono">{{ r.ref_id }}</td>
+              <td style="color:var(--slate);font-size:12.5px;white-space:nowrap;">{{ r.created_at[:16] }}</td>
+              <td>
+                <span style="font-size:11px;padding:3px 9px;border-radius:5px;font-weight:600;
+                  background:{% if r.input_method=='scan' %}#f3e8ff{% else %}var(--sky){% endif %};
+                  color:{% if r.input_method=='scan' %}#7c3aed{% else %}var(--blue){% endif %};">
+                  {{ r.input_method|title }}
+                </span>
+              </td>
+              <td style="font-size:13px;white-space:nowrap;">{{ r.bp }}<span style="color:var(--muted);font-size:11px;"> mmHg</span></td>
+              <td style="font-size:13px;white-space:nowrap;">{{ r.cholesterol }}<span style="color:var(--muted);font-size:11px;"> mg/dL</span></td>
+              <td style="font-size:13px;white-space:nowrap;">{{ r.heart_rate }}<span style="color:var(--muted);font-size:11px;"> bpm</span></td>
+              <td><span style="font-size:15px;font-weight:800;color:{% if r.severity=='Low' %}var(--green){% elif r.severity=='Moderate' %}var(--yellow){% elif r.severity=='High' %}var(--orange){% else %}var(--red){% endif %};">{{ r.risk_score|round(1) }}%</span></td>
+              <td><span class="rp rp-{{ r.severity }}"><span class="dot"></span>{{ r.severity }}</span></td>
+              <td style="font-size:12px;color:var(--slate);max-width:130px;">
+                {% if r.doctor_remarks %}
+                  <i class="fas fa-comment-medical" style="color:var(--blue);margin-right:3px;"></i>{{ r.doctor_remarks[:40] }}{% if r.doctor_remarks|length > 40 %}…{% endif %}
+                {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+              </td>
+              <td><a href="/doctor/report/{{ r.id }}" class="bp bxs"><i class="fas fa-eye"></i> Review</a></td>
+            </tr>
+            {% endfor %}
+            {% if not reports %}
+            <tr><td colspan="11">
+              <div class="es">
+                <span class="es-icon"><i class="fas fa-users-slash"></i></span>
+                <h5>No reports found</h5>
+                <p>Try adjusting your search or filter criteria.</p>
+              </div>
+            </td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% set active = 'reports' %}
+{% extends "base.html" %}
+{% block title %}My Reports{% endblock %}
+
+{% block body %}
+{% include '_sidebar.html' %}
+
+<header class="topbar">
+    <button class="hmbg" aria-label="Menu"><i class="fas fa-bars"></i></button>
+    <div class="tb-left">
+        <div class="tb-title">My Assessment Reports</div>
+        <div class="tb-sub">Full cardiac assessment history</div>
+    </div>
+    <div class="tb-right">
+        <a href="/patient/assess" class="btn-p"><i class="fas fa-plus"></i> New Assessment</a>
+    </div>
+</header>
+
+<main class="pw pe">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }} mb-3"><i class="fas fa-info-circle"></i>{{ msg }}</div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    {% if reports %}
+
+    <!-- SUMMARY PILLS -->
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <span style="font-size:13px;color:var(--slate);font-weight:600;">{{ reports|length }} total reports</span>
+        {% set sev_counts = {'Low': 0, 'Moderate': 0, 'High': 0, 'Critical': 0} %}
+        {% for r in reports %}
+            {% if r.severity in sev_counts %}{% set _ = sev_counts.update({r.severity: sev_counts[r.severity]+1}) %}{% endif %}
+        {% endfor %}
+        {% for sev, cnt in sev_counts.items() %}{% if cnt > 0 %}
+        <span class="rp rp-{{ sev }}"><span class="dot"></span>{{ sev }} ({{ cnt }})</span>
+        {% endif %}{% endfor %}
+    </div>
+
+    <div class="card">
+        <div class="cb p0">
+            <div class="tw">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th style="width:36px;">#</th>
+                            <th>Reference ID</th>
+                            <th>Date & Time</th>
+                            <th>Method</th>
+                            <th>Age</th>
+                            <th>BP</th>
+                            <th>Chol.</th>
+                            <th>HR</th>
+                            <th>Risk Score</th>
+                            <th>Severity</th>
+                            <th>Doctor Notes</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in reports %}
+                        <tr>
+                            <td style="color:var(--muted);font-size:12px;font-weight:600;">{{ loop.index }}</td>
+                            <td class="mc">{{ r.ref_id }}</td>
+                            <td style="color:var(--slate);font-size:12.5px;white-space:nowrap;">{{ r.created_at[:16] }}</td>
+                            <td>
+                                <span style="font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600;
+                                    background:{% if r.input_method=='scan' %}#f3e8ff{% else %}#eff6ff{% endif %};
+                                    color:{% if r.input_method=='scan' %}#7c3aed{% else %}var(--blue){% endif %};">
+                                    <i class="fas fa-{% if r.input_method=='scan' %}image{% else %}keyboard{% endif %} me-1"></i>{{ r.input_method|title }}
+                                </span>
+                            </td>
+                            <td style="font-size:13px;">{{ r.age }}</td>
+                            <td style="font-size:13px;white-space:nowrap;font-weight:600;
+                                color:{% if r.bp|int > 140 %}var(--red){% elif r.bp|int > 120 %}var(--yellow){% else %}var(--navy){% endif %};">
+                                {{ r.bp }} <span style="color:var(--muted);font-size:11px;font-weight:400;">mmHg</span>
+                            </td>
+                            <td style="font-size:13px;white-space:nowrap;font-weight:600;
+                                color:{% if r.cholesterol|int >= 240 %}var(--red){% elif r.cholesterol|int >= 200 %}var(--orange){% else %}var(--navy){% endif %};">
+                                {{ r.cholesterol }} <span style="color:var(--muted);font-size:11px;font-weight:400;">mg/dL</span>
+                            </td>
+                            <td style="font-size:13px;white-space:nowrap;font-weight:600;
+                                color:{% if r.heart_rate|int > 100 or r.heart_rate|int < 60 %}var(--yellow){% else %}var(--navy){% endif %};">
+                                {{ r.heart_rate }} <span style="color:var(--muted);font-size:11px;font-weight:400;">bpm</span>
+                            </td>
+                            <td>
+                                <!-- Mini bar + score -->
+                                <div style="min-width:80px;">
+                                    <div style="font-size:15px;font-weight:800;line-height:1;
+                                        color:{% if r.severity=='Low' %}var(--green){% elif r.severity=='Moderate' %}var(--yellow){% elif r.severity=='High' %}var(--orange){% else %}var(--red){% endif %};">
+                                        {{ r.risk_score|round(1) }}%
+                                    </div>
+                                    <div style="background:#f1f5f9;border-radius:3px;height:4px;margin-top:4px;overflow:hidden;">
+                                        <div style="width:{{ r.risk_score }}%;height:100%;background:
+                                            {% if r.severity=='Low' %}var(--green){% elif r.severity=='Moderate' %}var(--yellow){% elif r.severity=='High' %}var(--orange){% else %}var(--red){% endif %};
+                                            border-radius:3px;"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="rp rp-{{ r.severity }}"><span class="dot"></span>{{ r.severity }}</span>
+                            </td>
+                            <td style="max-width:150px;">
+                                {% if r.doctor_remarks %}
+                                <span style="font-size:12px;color:var(--slate);" title="{{ r.doctor_remarks }}">
+                                    <i class="fas fa-comment-medical" style="color:var(--blue);margin-right:4px;"></i>
+                                    {{ r.doctor_remarks[:45] }}{% if r.doctor_remarks|length>45 %}…{% endif %}
+                                </span>
+                                {% else %}
+                                <span style="color:var(--muted);font-size:12px;">Awaiting review</span>
+                                {% endif %}
+                            </td>
+                            <td style="white-space:nowrap;">
+                                <a href="/patient/download-pdf/{{ r.id }}" class="bo bxs">
+                                    <i class="fas fa-download" style="color:#dc2626;"></i> PDF
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="card">
+        <div class="cb">
+            <div class="es">
+                <span class="es-icon"><i class="fas fa-file-medical"></i></span>
+                <h5>No reports on file</h5>
+                <p>Complete your first cardiac assessment to see results here.</p>
+                <a href="/patient/assess" class="bp" style="margin-top:14px;display:inline-flex;">
+                    <i class="fas fa-stethoscope"></i> Start Assessment
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</main>
+{% endblock %}

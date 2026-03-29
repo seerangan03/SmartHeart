@@ -1,0 +1,102 @@
+{% set active = 'prescriptions' %}
+{% extends "base.html" %}
+{% block title %}My Prescriptions{% endblock %}
+
+{% block body %}
+{% include '_sidebar.html' %}
+
+<header class="topbar">
+    <button class="hmbg" aria-label="Menu"><i class="fas fa-bars"></i></button>
+    <div class="tb-left">
+        <div class="tb-title">My Prescriptions</div>
+        <div class="tb-sub">SmartHeart · Doctor-issued prescriptions</div>
+    </div>
+    <div class="tb-right">
+        <a href="/patient/dashboard" class="btn-g"><i class="fas fa-arrow-left"></i> Dashboard</a>
+    </div>
+</header>
+
+<main class="pw pe">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }} mb-3"><i class="fas fa-info-circle"></i> {{ msg }}</div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    {% if prescriptions %}
+    <div class="card">
+        <div class="ch">
+            <i class="fas fa-prescription" style="color:var(--blue);"></i>
+            All Prescriptions
+            <span style="margin-left:auto;font-size:12px;color:var(--muted);font-weight:400;">{{ prescriptions|length }} prescription(s)</span>
+        </div>
+        <div class="cb p0">
+            <div class="tw">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Report Ref</th>
+                            <th>Prescribing Doctor</th>
+                            <th>Medications</th>
+                            <th>Risk Level</th>
+                            <th>Date Issued</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rx in prescriptions %}
+                        <tr>
+                            <td class="mc">{{ rx.ref_id }}</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2589c7,#1553a0);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:11px;flex-shrink:0;">
+                                        {{ rx.doctor_name[0]|upper }}
+                                    </div>
+                                    <span style="font-weight:600;color:var(--navy);">{{ rx.doctor_name }}</span>
+                                </div>
+                            </td>
+                            <td style="font-size:12.5px;color:var(--slate);max-width:200px;">
+                                {{ rx.medications[:70] }}{% if rx.medications|length > 70 %}…{% endif %}
+                            </td>
+                            <td>
+                                <span class="rp rp-{{ rx.severity }}"><span class="dot"></span>{{ rx.severity }}</span>
+                            </td>
+                            <td style="color:var(--muted);font-size:12px;white-space:nowrap;">{{ rx.created_at[:16] }}</td>
+                            <td>
+                                {% if not rx.is_read %}
+                                <span style="background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;padding:3px 9px;border-radius:4px;">NEW</span>
+                                {% else %}
+                                <span style="background:#f1f5f9;color:var(--muted);font-size:11px;font-weight:600;padding:3px 9px;border-radius:4px;">Read</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="/patient/prescription/{{ rx.report_id }}" class="bp bxs">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="card">
+        <div class="cb">
+            <div class="es">
+                <span class="es-icon"><i class="fas fa-prescription"></i></span>
+                <h5>No prescriptions yet</h5>
+                <p>When your doctor reviews a report and sends you a prescription, it will appear here.</p>
+                <a href="/patient/assess" class="bp" style="margin-top:12px;display:inline-flex;">
+                    <i class="fas fa-stethoscope"></i> Start Assessment
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</main>
+{% endblock %}
